@@ -27,3 +27,13 @@ This document tracks every error, edge-case hurdle, or design correction encount
 - **Requirement:** Malformed JSON must never crash the game.
 - **Resolution:** Implemented `try/except (json.JSONDecodeError, OSError)` block in `core/config.py` that automatically copies the damaged file to `config.json.bad` and falls back to in-memory defaults. Verified with unit test `test_01_04`.
 - **Status:** **Resolved & Verified**
+---
+
+### Issue #004: Python SyntaxError on invalid walrus operator assignment in test suite
+- **Module:** Module 2 (Event Bus tests, Use Case 02.11)
+- **Symptom:** `SyntaxError: invalid syntax` on line 166 of `tests/test_event_bus.py`:
+  `self.bus.subscribe(EventType.PAUSE := EventType.GAME_PAUSE, ...)`
+- **Root Cause:** In Python, the walrus operator (`:=`) cannot be assigned to an attribute or dotted name (`obj.attr := value`). It only accepts a simple identifier.
+- **Resolution:** Replaced the line with direct subscription:
+  `self.bus.subscribe(EventType.GAME_PAUSE, lambda e: received.append(e.name))`
+- **Status:** **Resolved & Verified**

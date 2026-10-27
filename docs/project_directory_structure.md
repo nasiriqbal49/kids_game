@@ -1,8 +1,6 @@
 # Project Directory Structure
 
-**Last Updated:** Phase A (Module 1 certified, Module 2 in progress)
-
-This document maps the project file tree, distinguishing what is currently implemented from what is planned.
+**Last Updated:** Phase A (Automated)
 
 ---
 
@@ -10,29 +8,56 @@ This document maps the project file tree, distinguishing what is currently imple
 
 ```text
 kids_game/
-│
-├── .venv/                         # Python 3.12 virtual environment (gitignored)
-├── logs/                          # Runtime log outputs (gitignored)
-│   └── kidsgame.log               # Auto-rotated execution logs
-│
-├── core/                          # Foundation engine modules (Phase A)
-│   ├── __init__.py                # Core package marker
-│   ├── logger.py                  # Rotating logger (Module 1)
-│   └── config.py                  # JSON config loader & validator (Module 1)
-│
-├── docs/                          # Master design & tracking documentation
-│   ├── full_game_plan.md          # Complete unabridged specification (Parts 1–5)
-│   ├── use_case_catalogue.md      # All 235 use cases & severity rules (Part 6)
-│   ├── progress_tracker.md        # Live status, timestamps & use-case completions
-│   ├── issues_and_resolutions.md  # Hurdle & bug resolution log
-│   ├── master_ai_handoff.md       # Context snapshot for AI resumption
-│   └── project_directory_structure.md # This file
-│
-├── tests/                         # Automated test suite
-│   ├── __init__.py                # Tests package marker
-│   └── test_config.py             # Unit tests for Module 1 (UC 01.01–01.06)
-│
-├── .gitignore                     # Git exclusion rules
-├── config.json                    # Active system configuration
-├── Kids_Motion_Game_Plan.pdf      # Source plan PDF
-└── main.py                        # Test runner & entry point
+├── core
+│   ├── __init__.py
+│   ├── config.py
+│   ├── event_bus.py
+│   ├── events.py
+│   └── logger.py
+├── docs
+│   ├── full_game_plan.md
+│   ├── issues_and_resolutions.md
+│   ├── master_ai_handoff.md
+│   ├── progress_tracker.md
+│   ├── project_directory_structure.md
+│   └── use_case_catalogue.md
+├── logs
+│   └── kidsgame.log
+├── tests
+│   ├── __init__.py
+│   ├── test_config.py
+│   └── test_event_bus.py
+├── tools
+│   └── show_tree.py
+├── .gitignore
+├── config.json
+├── Kids_Motion_Game_Plan.pdf
+└── main.py
+```
+
+---
+
+## Target Project Tree (Full Build Roadmap)
+
+```text
+kids_game/
+├── core/                          # Architecture foundation (Phase A)
+│   ├── logger.py                  # Module 1: Logging
+│   ├── config.py                  # Module 1: Settings
+│   ├── events.py                  # Module 2: Event catalogue & dataclass
+│   ├── event_bus.py               # Module 2: Pub/Sub message broker
+│   └── input_keyboard.py          # Module 3: Keyboard input adapter
+├── engine/                        # Game Engine & Mechanics (Phase B)
+│   ├── display.py                 # Module 4: Pygame second-screen display & HUD
+│   ├── audio.py                   # Module 5: Sound & music manager
+│   ├── game_engine.py             # Module 6: State machine & fixed timestep loop
+│   ├── mechanics/                 # Module 7: Reusable gameplay blocks
+│   └── games/                     # Module 8 & 18: Runner, Lane Switch, Freeze Dance
+├── vision/                        # Computer Vision & Tracking (Phase C & E)
+├── identity/                      # Player Profiles & Calibration (Phase D)
+├── projection/                    # Projector Output (Phase E)
+├── assets/                        # Art, sounds and fonts
+├── docs/                          # Comprehensive documentation & logs
+├── tests/                         # Module unit tests
+└── main.py                        # Game startup script
+```
