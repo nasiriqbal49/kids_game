@@ -25,8 +25,8 @@
 4. **Git Discipline:** After every working module/test, guide the user to git add, commit with a descriptive message, and push.
 
 ## 4. Current Exact State & Next Immediate Step
-- **Completed:** Module 1 (Config and Logging).
-- **Next Task:** Module 2 (Event Bus) in `core/event_bus.py`.
+- **Completed:** Module 1 (Config & Logging), Module 2 Piece 1 (`events.py`), Module 2 Piece 2 (`event_bus.py`).
+- **Next Task:** Unit tests for Module 2 in `tests/test_event_bus.py` verifying Use Cases `02.01` to `02.11`.
 - **Module 2 Requirements:**
   - Fast, thread-safe publish-subscribe message bus.
   - Event contract: `timestamp`, `source`, `name`, `payload`.
