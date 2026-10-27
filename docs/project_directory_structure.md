@@ -13,6 +13,7 @@ kids_game/
 │   ├── config.py
 │   ├── event_bus.py
 │   ├── events.py
+│   ├── input_keyboard.py
 │   └── logger.py
 ├── docs
 │   ├── full_game_plan.md

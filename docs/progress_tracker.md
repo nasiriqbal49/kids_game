@@ -10,8 +10,8 @@
 |---|---|---|---|---|---|---|
 | **1** | **Config and Logging** | **A** | **10** | **DONE** | Session 1 | Verified with unit tests (01.01–01.06). |
 | **2** | **Event Bus** | **A** | **11** | **DONE** | Session 1 | Verified with unit tests (02.01–02.11). Thread-safe queue, error isolation, catalogue enforcement. |
-| **3** | **Input Adapter (Keyboard)** | **A** | **9** | **UP NEXT** | — | Stand-in player for testing without camera. |
-| 4 | Display and UI | B | 13 | PENDING | — | Pygame TV output, HUD, 1080p full-screen. |
+| **3** | **Input Adapter (Keyboard)** | **A** | **9** | **DONE** | Session 1 | Verified with unit tests (03.01–03.09). Key-repeat suppression, duck/stand hold, lean cancel, focus loss safety, Ctrl parent controls, latency simulation. |
+| **4** | **Display and UI** | **B** | **13** | **UP NEXT** | — | Pygame TV output, HUD, 1080p full-screen on extended display. |
 | 5 | Audio Manager | B | 10 | PENDING | — | HDMI TV audio, SFX mixing. |
 | 6 | Game Engine Core | B | 12 | PENDING | — | State machine, fixed-timestep loop. |
 | 7 | Game Mechanics Library | B | 15 | PENDING | — | Spawning, hitboxes, power-ups. |
@@ -57,3 +57,15 @@
   - `02.09` (Debug tap with sampling for high-rate ticks): **Pass**
   - `02.10` (Stale event helper calculation): **Pass**
   - `02.11` (Shutdown time-limited flush and new event lock): **Pass**
+  ### Module 3: Input Adapter (Keyboard)
+- **Files Created:** `core/input_keyboard.py`, `tests/test_input_keyboard.py`
+- **Use Cases Verified:**
+  - `03.01` (Single JUMP event per physical press; OS auto-repeat ignored): **Pass**
+  - `03.02` (Hold down arrow = DUCK; release = STAND): **Pass**
+  - `03.03` (Left/Right lean; pressing both cancels cleanly to LEAN_CENTER): **Pass**
+  - `03.04` (Independent simultaneous jump and lean): **Pass**
+  - `03.05` (Focus loss resets held keys and returns posture to neutral): **Pass**
+  - `03.06` (Config keybindings with safe fallback): **Pass**
+  - `03.07` (Parent keys require Ctrl modifier to prevent child accidents): **Pass**
+  - `03.08` (Keyboard enabled/disabled toggle for camera-only mode): **Pass**
+  - `03.09` (Simulated latency delay for timing tests): **Pass**

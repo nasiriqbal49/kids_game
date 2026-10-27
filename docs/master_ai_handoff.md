@@ -25,15 +25,21 @@
 4. **Git Discipline:** After every working module/test, guide the user to git add, commit with a descriptive message, and push.
 
 ## 4. Current Exact State & Next Immediate Step
-- **Completed:**
-  - Module 1 (Config & Logging): `core/logger.py`, `core/config.py`, `tests/test_config.py`.
-  - Module 2 (Event Bus): `core/events.py`, `core/event_bus.py`, `tests/test_event_bus.py`.
-- **Next Task:** Module 3 (Input Adapter - Keyboard) in `core/input_keyboard.py`.
-- **Module 3 Requirements (Use Cases 03.01–03.09):**
-  - Stand-in player that converts physical keystrokes into Event Bus events (`JUMP`, `DUCK`, `STAND`, `LEAN_LEFT`, `LEAN_RIGHT`, `LEAN_CENTER`).
-  - Key-repeat suppression (UC 03.01: single physical press = 1 jump).
-  - Hold-to-duck with `STAND` emitted on key release and focus loss (UC 03.02, 03.05).
-  - Simultaneous opposite keys cancel out to `LEAN_CENTER` (UC 03.03).
-  - Independent simultaneous jump + lean (UC 03.04).
-  - Parent modifier hotkeys for pause, quit, recalibrate (UC 03.07).
-  - Simulated latency delay toggle for early difficulty tuning (UC 03.09).
+
+### Current State
+- **Phase A: Foundation is 100% COMPLETE & CERTIFIED:**
+  - **Module 1 (Config & Logging):** `core/logger.py`, `core/config.py`, `tests/test_config.py` (Passed 01.01–01.06).
+  - **Module 2 (Event Bus):** `core/events.py`, `core/event_bus.py`, `tests/test_event_bus.py` (Passed 02.01–02.11).
+  - **Module 3 (Input Adapter - Keyboard):** `core/input_keyboard.py`, `tests/test_input_keyboard.py` (Passed 03.01–03.09).
+- **All 3 unit test suites pass (24 total unit tests).**
+- **Git status:** Clean, all docs and code pushed to `main`.
+
+### Next Immediate Step (Starting Phase B: Playable Game with Keyboard)
+- **Next Task:** Module 4 (Display and UI) in `engine/display.py`.
+- **Pre-requisite:** Install `pygame` in the virtual environment (`pip install pygame`).
+- **Module 4 Requirements (Use Cases 04.01–04.13):**
+  - Open a 1080p full-screen window on the TV (second display / extended desktop).
+  - Fallback window on laptop if TV is not plugged in (UC 04.02).
+  - Render HUD: score, health bar, speed, power-ups, streak (UC 04.05, 04.06).
+  - Draw menus (main menu, pause, game over, results).
+  - Fail-soft handling if HDMI is disconnected mid-game (UC 04.03).
