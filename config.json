@@ -1,0 +1,41 @@
+{
+    "display": {
+        "fullscreen": true,
+        "display_index": 1,
+        "render_width": 1920,
+        "render_height": 1080,
+        "target_fps": 60
+    },
+    "audio": {
+        "volume": 80,
+        "mute": false,
+        "max_volume_cap": 100,
+        "sfx_enabled": true,
+        "music_enabled": true
+    },
+    "camera": {
+        "camera_index": 0,
+        "width": 640,
+        "height": 480,
+        "target_fps": 30,
+        "mirror": true
+    },
+    "gameplay": {
+        "sensitivity": "normal",
+        "idle_timeout_sec": 300,
+        "forgiving_hitbox": true
+    },
+    "logging": {
+        "level": "INFO",
+        "max_bytes": 1000000,
+        "backup_count": 5
+    },
+    "keyboard": {
+        "jump": "space",
+        "duck": "down",
+        "lean_left": "left",
+        "lean_right": "right",
+        "pause": "p",
+        "debug": "f3"
+    }
+}
