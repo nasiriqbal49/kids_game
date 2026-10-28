@@ -2,14 +2,25 @@ import time
 import unittest
 from core.events import EventType
 from core.event_bus import EventBus
-from core.input_keyboard import KeyboardInputAdapter
+from core.input_keyboard import KeyboardInputAdapter, DEFAULT_KEY_MAP
 
+class FakeConfig:
+    """Minimal stand-in for Config, so these tests never touch the real config.json."""
+    def __init__(self, values=None):
+        self.values = values or {}
+
+    def get(self, key, default=None):
+        return self.values.get(key, default)
+
+
+def default_key_values():
+    return {f"keyboard.{k}": v for k, v in DEFAULT_KEY_MAP.items()}
 
 class TestKeyboardInputAdapter(unittest.TestCase):
 
     def setUp(self):
         self.bus = EventBus()
-        self.adapter = KeyboardInputAdapter(bus=self.bus)
+        self.adapter = KeyboardInputAdapter(bus=self.bus, cfg=FakeConfig(default_key_values()))
         self.events_received = []
 
         # Listen to all relevant player and system events
@@ -95,6 +106,26 @@ class TestKeyboardInputAdapter(unittest.TestCase):
         self.adapter.enabled = False
         self.adapter.on_key_down("space")
         self.assertEqual(len(self.events_received), 0)
+
+    def test_03_06_custom_keybindings_from_config(self):
+        """UC 03.06: Key bindings come from config, so keys can be remapped."""
+        values = default_key_values()
+        values["keyboard.jump"] = "w"
+        adapter = KeyboardInputAdapter(bus=self.bus, cfg=FakeConfig(values))
+        adapter.on_key_down("space")
+        self.assertEqual(self.events_received, [])
+        adapter.on_key_down("w")
+        self.assertEqual(self.events_received, [EventType.JUMP])
+
+    def test_03_06_invalid_keybinding_falls_back_to_default(self):
+        """UC 03.06: An invalid key name in config falls back to the default key."""
+        values = default_key_values()
+        values["keyboard.jump"] = ""
+        values["keyboard.duck"] = 123
+        adapter = KeyboardInputAdapter(bus=self.bus, cfg=FakeConfig(values))
+        adapter.on_key_down("space")
+        adapter.on_key_down("down")
+        self.assertEqual(self.events_received, [EventType.JUMP, EventType.DUCK])
 
     def test_03_09_simulated_latency(self):
         """UC 03.09: Latency switch delays event dispatch for difficulty tuning."""

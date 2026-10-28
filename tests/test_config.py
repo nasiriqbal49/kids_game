@@ -59,6 +59,18 @@ class TestConfigModule(unittest.TestCase):
         self.assertEqual(cfg.get("audio.volume"), 45)
         self.assertEqual(cfg.get("display.fullscreen"), False)
 
+    def test_01_05_unknown_key_is_reported_with_suggestion(self):
+        """UC 01.05: A typo in a key is reported with the closest valid key name."""
+        with open(self.cfg_file, "w", encoding="utf-8") as f:
+            json.dump({"audio": {"volum": 50}}, f)
+
+        with self.assertLogs("kidsgame.config", level="WARNING") as logs:
+            cfg = Config(file_path=self.cfg_file)
+
+        output = "\n".join(logs.output)
+        self.assertIn("Unknown configuration key 'audio.volum'", output)
+        self.assertIn("Did you mean 'audio.volume'?", output)
+        self.assertEqual(cfg.get("audio.volume"), 80)  # typo ignored, default applies
 
 if __name__ == "__main__":
     unittest.main()

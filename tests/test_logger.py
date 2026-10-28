@@ -65,7 +65,11 @@ class TestLoggerModule(unittest.TestCase):
 
     def test_01_08_rotation_keeps_only_backup_count_files(self):
         """UC 01.08: Old logs are rotated and only the last N files are kept."""
-        setup_logging(level="INFO", log_dir=self.log_dir, max_bytes=2000, backup_count=2)
+        root = setup_logging(level="INFO", log_dir=self.log_dir, max_bytes=2000, backup_count=2)
+        # Keep test output quiet: remove the console handler, keep the file handler
+        for handler in list(root.handlers):
+            if not hasattr(handler, "maxBytes"):
+                root.removeHandler(handler)
         log = get_logger("demo")
         for i in range(300):
             log.info("line %03d %s", i, "x" * 40)
