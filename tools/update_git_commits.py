@@ -81,24 +81,13 @@ DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S %z"
 
 SELECTED_COLUMNS = [
     "commit_number",
-    "commit_hash",
     "short_hash",
     "commit_datetime",
-    "author_name",
-    "author_email",
-    "committer_name",
-    "committer_email",
     "subject",
-    "full_message",
-    "parent_hashes",
-    "tree_hash",
-    "branches",
-    "tags",
     "files_changed",
     "insertions",
     "deletions",
     "changed_files",
-    "signature_status",
 ]
 
 
