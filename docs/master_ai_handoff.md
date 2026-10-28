@@ -39,21 +39,19 @@
 
 ### Current State (2026-10-28)
 - **Phase A (Foundation) complete:** Modules 1, 2, 3 (43 tests).
-- **Gap G3 closed:** `docs/event_contracts.md` defines the Phase B event payloads.
-- **Module 4 (Display and UI) in progress:** 13 display tests. Verified: 04.01, 04.02, 04.04, 04.05, 04.11, 04.13. Partial: 04.06 (state only), 04.07 (constants only), 04.10 (flag only), 04.12 (helper only). Not started: 04.03, 04.08, 04.09.
-- **Independent review on 2026-10-28** found and fixed: Alt+Tab did not pause the game (wrong pygame event, and the test faked the same wrong event), the display swallowed keyboard events, and closing the window published a pause. Tracker over-claims were corrected. See issues #013 to #015.
-- **Total test suite: 56 passing** (verified from real output, commit c33d3c5): `python -m unittest discover -s tests -t . -v`.
-- **Git history:** `docs/git_commits.md` (regenerate with `python tools/update_git_commits.py` after committing).
+- **Gap G3 closed:** `docs/event_contracts.md` defines Phase B event payloads.
+- **Gap G10 closed:** `engine/event_pump.py` owns the pygame event pump (6 tests), routing window events to DisplayManager and key events to KeyboardInputAdapter.
+- **Module 4 (Display and UI) in progress:** 13 display tests + 6 event pump tests. Verified: 04.01, 04.02, 04.04, 04.05, 04.11, 04.13. Partial: 04.06 (state only), 04.07 (constants only), 04.10 (flag only), 04.12 (helper only). Not started: 04.03, 04.08, 04.09.
+- **Total test suite: 62 passing** (verified from real output): `python -m unittest discover -s tests -t . -v`.
+- **Git history:** `docs/git_commits.md`.
 
 ### Next Immediate Step
-1. **Resume check:** ask the owner to run `git pull origin main`, `git status`, and `python -m unittest discover -s tests -t .`, and confirm 56 tests pass.
-2. **Finish Module 4 in small steps** (read use cases 04.01 to 04.13 first):
-   - **Event pump (G10):** the main loop owns `pygame.event.get()`; it passes the list to `DisplayManager.process_window_events(events)` and routes the returned key events to the keyboard adapter.
-   - **04.03:** TV or HDMI lost mid-game: pause with reason `hdmi_disconnect` (the value in `docs/event_contracts.md`), resume with a 3-second countdown.
-   - **04.08, 04.09:** menu drawing with keyboard navigation.
-   - **Make partial items real (G8):** HUD uses the surface size and draws the player name; drawing uses `reduced_effects`; test the red low-health bar.
-   - **Live check on the TV (G9):** `main.py` shows the HUD on the TV at 60 FPS and responds to the keyboard.
-3. **Then Module 5 (Audio Manager)** in `engine/audio.py`.
+- **Complete Module 4 Remaining Items:**
+  1. `04.03`: HDMI cable pulled or TV disconnected mid-game (detect display disconnect, pause with `reason="hdmi_disconnect"`, resume with 3-second countdown after reconnected).
+  2. `04.08` & `04.09`: Menu drawing abstractions (Main Menu, Pause Menu, Results overlay with keyboard navigation).
+  3. Make partial items real (Gap G8): HUD surface scaling, draw player name (04.12), consume `reduced_effects` during rendering (04.10), draw red low-health bar (04.06).
+  4. Live TV check (Gap G9): `main.py` test loop showing 1080p HUD at 60 FPS on the TV driven by EventPump and Keyboard.
+- **Then Proceed to Module 5 (Audio Manager)** in `engine/audio.py`.
 
 ### Known open items
-See "Known gaps and open items" in `docs/progress_tracker.md` (G1 to G6).
+See "Known gaps and open items" in `docs/progress_tracker.md` (G1 to G11).

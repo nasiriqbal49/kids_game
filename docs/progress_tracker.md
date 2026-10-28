@@ -3,7 +3,7 @@
 **Last Updated:** 2026-10-28
 **Current Milestone Target:** Milestone M1 (Keyboard Runner)
 **Current Phase:** Phase A (Foundation) complete; Phase B (Playable game with keyboard) in progress (Module 4)
-**Verified unit tests (from real output):** 56 run, 56 passing (verified 2026-10-28, commit c33d3c5) (`python -m unittest discover -s tests -t .`)
+**Verified unit tests (from real output):** 62 run, 62 passing (verified 2026-10-28) (`python -m unittest discover -s tests -t .`)
 
 > **Rule for this file:** a use case is "Pass" only if a test carrying its ID exists, runs, and passed in output pasted by the owner. A module is DONE only when every P1 and P2 use case has a passing test; any deferred use case is listed explicitly below. See `docs/AI_START_HERE.md`.
 
@@ -39,11 +39,12 @@
 | Test file | Tests |
 |---|---|
 | `tests/test_config.py` | 15 |
+| `tests/test_display.py` | 13 |
 | `tests/test_event_bus.py` | 13 |
+| `tests/test_event_pump.py` | 6 |
 | `tests/test_input_keyboard.py` | 10 |
 | `tests/test_logger.py` | 5 |
-| `tests/test_display.py` | 13 |
-| **Total** | **56** |
+| **Total** | **62** |
 
 ---
 
@@ -123,4 +124,5 @@
 | G7 | Module 4 remaining: 04.03 (use the contract reason `hdmi_disconnect`), 04.08, 04.09 | P1/P2 | Open |
 | G8 | Make partial Module 4 items real: HUD scales to the surface size (not hard-coded 1920x1080) and draws the player name (04.12); drawing consumes `reduced_effects` and `check_fps` is called from the loop (04.10); red low-health bar tested (04.06) | P2 | Open |
 | G9 | Real-hardware checks: TV on display index 1, fullscreen at 1080p on the 4K TV (consider `pygame.SCALED`), TV Game Mode, audio over HDMI | P1 | Open |
-| G10 | Main loop must own the pygame event pump: call `pygame.event.get()` once per frame, pass the list to `DisplayManager.process_window_events(events)`, then route the returned key events to the keyboard adapter (needs a pygame-key to adapter mapping) | P1 | Open |
+| G10 | Main loop must own the pygame event pump: call `pygame.event.get()` once per frame, pass the list to `DisplayManager.process_window_events(events)`, then route the returned key events to the keyboard adapter | P1 | **Closed** (`engine/event_pump.py`, 6 tests) |
+| G11 | `input_keyboard.py` sends pause payload as `{"action": "toggle"}`, whereas `event_contracts.md` specifies `{"reason": "parent_key"}`. Align when building Game Engine (Module 6). | Low | Open |

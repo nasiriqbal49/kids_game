@@ -27,7 +27,8 @@ kids_game/
 │   └── use_case_catalogue.md
 ├── engine
 │   ├── __init__.py
-│   └── display.py
+│   ├── display.py
+│   └── event_pump.py
 ├── logs
 │   └── kidsgame.log
 ├── tests
@@ -35,6 +36,7 @@ kids_game/
 │   ├── test_config.py
 │   ├── test_display.py
 │   ├── test_event_bus.py
+│   ├── test_event_pump.py
 │   ├── test_input_keyboard.py
 │   └── test_logger.py
 ├── tools
