@@ -157,6 +157,47 @@ class GameEngine:
             # 3. Transition to RESULTS screen
             self.transition_to(GameState.RESULTS)
 
+
+# -------------------------------------------------------------------------
+    # Error Boundary & Safe Execution (UC 06.08)
+    # -------------------------------------------------------------------------
+
+    def safe_step(self, update_callable) -> bool:
+        """
+        Executes a game step inside a protected boundary (UC 06.08).
+        If a mini-game or mechanic throws an error, logs full details, publishes
+        an ERROR event, and returns safely to MENU instead of freezing the TV.
+        Returns True if successful, False if an error was caught.
+        """
+        try:
+            update_callable()
+            return True
+        except Exception as err:
+            log.critical("Game module crashed during execution: %s (UC 06.08)", err, exc_info=True)
+            self.bus.publish(Event(EventType.ERROR, {
+                "module": "game_engine",
+                "message": str(err),
+                "recovered": True
+            }))
+            # Safe recovery route: return to MENU (UC 06.02, 06.08)
+            self.transition_to(GameState.MENU)
+            return False
+
+    # -------------------------------------------------------------------------
+    # Quit Mid-Game (UC 06.10)
+    # -------------------------------------------------------------------------
+
+    def quit_mid_game(self, save_score: bool = False) -> None:
+        """
+        Quits an active run and returns safely to MENU (UC 06.10).
+        Partial runs are discarded by default unless save_score=True.
+        """
+        log.info("Quitting game mid-run (save_score=%s) (UC 06.10).", save_score)
+        if not save_score:
+            self.score = 0
+            self.streak = 0
+        self.transition_to(GameState.MENU)
+
     # -------------------------------------------------------------------------
     # Game Reset (UC 06.11)
     # -------------------------------------------------------------------------

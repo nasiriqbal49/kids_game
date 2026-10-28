@@ -145,5 +145,38 @@ class TestGameEngine(unittest.TestCase):
         self.engine.tick(6.0)
         self.assertEqual(self.engine.state, GameState.MENU)
 
+
+    def test_06_08_error_boundary_catches_crash_and_returns_to_menu(self):
+        """UC 06.08: A game exception is caught safely, publishes ERROR event, and returns to MENU."""
+        error_events = []
+        self.bus.subscribe(EventType.ERROR, lambda e: error_events.append(e.payload))
+
+        self.engine.transition_to(GameState.PLAYING)
+
+        def crashing_mini_game():
+            raise ZeroDivisionError("Simulated obstacle physics crash")
+
+        # Must return False and not let the exception escape
+        success = self.engine.safe_step(crashing_mini_game)
+        self.assertFalse(success)
+
+        # Engine recovers to MENU
+        self.assertEqual(self.engine.state, GameState.MENU)
+        self.assertEqual(len(error_events), 1)
+        self.assertIn("Simulated obstacle physics crash", error_events[0]["message"])
+
+    def test_06_10_quit_mid_game_returns_to_menu_and_discards_score(self):
+        """UC 06.10: Quitting mid-game resets partial run and returns to MENU."""
+        self.engine.transition_to(GameState.PLAYING)
+        self.engine.score = 750
+        self.engine.streak = 8
+
+        self.engine.quit_mid_game(save_score=False)
+
+        self.assertEqual(self.engine.state, GameState.MENU)
+        self.assertEqual(self.engine.score, 0)
+        self.assertEqual(self.engine.streak, 0)
+
+
 if __name__ == "__main__":
     unittest.main()
