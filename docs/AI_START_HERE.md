@@ -29,7 +29,7 @@ Read in exactly this order. Do not skip. Do not skim.
 6. `docs/full_game_plan.md` - requirements, hardware, architecture, all 19 modules with purpose, responsibilities, why-in-this-order, risks, "done when". **Read the section of the module you are about to build in full.**
 7. `docs/use_case_catalogue.md` - every use case with ID, priority, success criteria, failure/edge condition, handling. **Read every use case of the module you are about to build.** These are the acceptance tests.
 8. The code in `core/` (and other folders) that the next module depends on, and its tests in `tests/`.
-9. `Kids_Motion_Game_Plan.pdf` (in repo root) is the original approved plan. If a `.md` file and the PDF disagree, stop and ask the owner.
+9. The original PDF plan was removed from the repo by the owner. `docs/full_game_plan.md` and `docs/use_case_catalogue.md` are now the only source of truth. If they look inconsistent or incomplete, stop and ask the owner; never "repair" them from memory.
 
 After reading, state in two or three sentences: which module is next, which use cases it must satisfy, and what you verified. Then begin.
 

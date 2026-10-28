@@ -61,12 +61,16 @@ class KeyboardInputAdapter:
         payload = payload or {}
 
         if self.simulated_latency_sec > 0:
-            def delayed():
-                time.sleep(self.simulated_latency_sec)
-                self.bus.publish(Event(event_name, payload, source="keyboard_delayed"))
+            # Build the event NOW so its timestamp is the real key-press time.
+            event = Event(event_name, payload, source="keyboard_delayed")
+            delay = self.simulated_latency_sec
 
-            t = threading.Thread(target=delayed, daemon=True)
-            t.start()
+            def delayed():
+                time.sleep(delay)
+                # Background threads must use post(), never publish().
+                self.bus.post(event)
+
+            threading.Thread(target=delayed, daemon=True).start()
         else:
             self.bus.publish(Event(event_name, payload, source="keyboard"))
 

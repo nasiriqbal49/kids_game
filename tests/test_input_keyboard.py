@@ -102,11 +102,15 @@ class TestKeyboardInputAdapter(unittest.TestCase):
         start_time = time.time()
         self.adapter.on_key_down("space")
 
-        # Event is not instantaneous
+        # Not delivered immediately
         self.assertEqual(len(self.events_received), 0)
 
-        # Wait for the delayed thread to dispatch
-        time.sleep(0.08)
+        # Even after the delay, the event waits in the thread-safe queue
+        time.sleep(0.12)
+        self.assertEqual(len(self.events_received), 0)
+
+        # The main loop drains it, which is when listeners receive it
+        self.bus.drain()
         self.assertIn(EventType.JUMP, self.events_received)
         self.assertGreaterEqual(time.time() - start_time, 0.05)
 
