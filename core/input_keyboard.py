@@ -82,10 +82,10 @@ class KeyboardInputAdapter:
         """Called when a physical key is pressed down."""
         key = key_name.lower()
 
-        # Check Parent Controls first - requires Ctrl modifier (UC 03.07)
+        # Check Parent Controls first - requires Ctrl modifier (UC 03.07, Gap G11)
         if ctrl_held:
             if key == self.key_map["pause"]:
-                self._dispatch(EventType.GAME_PAUSE, {"action": "toggle"})
+                self._dispatch(EventType.GAME_PAUSE, {"reason": "parent_key", "action": "toggle"})
                 return
             elif key == self.key_map["debug"]:
                 self._dispatch(EventType.DEBUG_TOGGLED)

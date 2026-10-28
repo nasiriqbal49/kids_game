@@ -134,3 +134,12 @@ This document tracks every error, edge-case hurdle, or design correction encount
 - **Symptom:** The tracker marked 04.07, 04.10 and 04.12 as Pass on constants-only, flag-only or helper-only tests, and still listed gap G3 as open after the contracts were written. `docs/project_directory_structure.md` was empty (0 bytes). `requirements.txt` was saved as UTF-16 (shown as a binary file on GitHub).
 - **Resolution:** Tracker and handoff rewritten to show 6 verified, 4 partial, 3 not started. Directory doc regenerated with `python tools/show_tree.py --update`; `requirements.txt` re-saved as plain text. Both housekeeping fixes to be confirmed with `git show --stat HEAD`.
 - **Status:** **Resolved (housekeeping to be confirmed)**
+
+---
+
+### Issue #016: Gap G11: Pause event payload missing 'reason' contract key
+- **Module:** Module 3 / Module 6 integration
+- **Symptom:** `input_keyboard.py` dispatched `GAME_PAUSE` with payload `{"action": "toggle"}` which lacked the contract-mandated `"reason"` key required by `docs/event_contracts.md`.
+- **Root Cause:** Input adapter was created in Phase A before the event contracts were formalized in Phase B.
+- **Resolution:** Updated `core/input_keyboard.py` to dispatch `{"reason": "parent_key", "action": "toggle"}`. Conforms to `event_contracts.md` while preserving unpause toggle capability in `GameEngine`.
+- **Status:** **Resolved & Verified**

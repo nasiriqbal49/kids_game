@@ -26,10 +26,15 @@ kids_game/
 │   ├── project_directory_structure.md
 │   └── use_case_catalogue.md
 ├── engine
+│   ├── mechanics
+│   │   ├── __init__.py
+│   │   ├── entities.py
+│   │   └── manager.py
 │   ├── __init__.py
 │   ├── audio.py
 │   ├── display.py
-│   └── event_pump.py
+│   ├── event_pump.py
+│   └── game_engine.py
 ├── logs
 │   └── kidsgame.log
 ├── tests
@@ -39,8 +44,10 @@ kids_game/
 │   ├── test_display.py
 │   ├── test_event_bus.py
 │   ├── test_event_pump.py
+│   ├── test_game_engine.py
 │   ├── test_input_keyboard.py
-│   └── test_logger.py
+│   ├── test_logger.py
+│   └── test_mechanics.py
 ├── tools
 │   ├── show_tree.py
 │   └── update_git_commits.py

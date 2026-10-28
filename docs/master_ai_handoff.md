@@ -42,20 +42,19 @@
 - **Phase B (Playable Game with Keyboard) in progress:**
   - **Module 4 (Display and UI) COMPLETE:** 24 display tests + 6 event pump tests = 30 tests. All 13 use cases verified (04.01–04.13).
   - **Module 5 (Audio Manager) COMPLETE:** 7 audio tests. Core use cases verified (05.01–05.08; 05.09 and 05.10 deferred P3).
-  - **Interactive Runner (`main.py`):** Verified live at 60 FPS with scaled HUD, posture avatar, keyboard input pump, and real procedural sound effects.
-- **Total Test Suite:** **80 verified passing unit tests** across 7 test files (`python -m unittest discover -s tests -t . -v`).
-- **Gaps Closed:** G3, G7, G8, G9, G10 closed. G11 open (`input_keyboard.py` pause payload alignment).
+  - **Module 6 (Game Engine Core) COMPLETE:** 11 engine tests (`tests/test_game_engine.py`). Use cases 06.01–06.11 verified (06.12 deferred P3).
+  - **Module 7 (Game Mechanics Library) COMPLETE:** 15 mechanics tests (`tests/test_mechanics.py`). All 15 use cases verified (07.01–07.15).
+  - **Interactive Runner (`main.py`):** Verified live at 60 FPS with scaled HUD, posture avatar, keyboard input pump, and procedural audio.
+- **Total Test Suite:** **106 verified passing unit tests** across 9 test files (`python -m unittest discover -s tests -t . -v`).
+- **Gaps Closed:** G3, G7, G8, G9, G10, G11 closed.
 - **Git History:** `docs/git_commits.md`.
 
 ### Next Immediate Step
-- **Begin Module 6: Game Engine Core** in `engine/game_engine.py`:
-  - Requirements (Use Cases 06.01 to 06.12):
-    1. Fixed-timestep game loop independent of camera/render frame rates (06.07).
-    2. Comprehensive State Machine managing transitions (`MENU`, `PROFILE_SELECT`, `CALIBRATION`, `COUNTDOWN`, `PLAYING`, `PAUSED`, `GAME_OVER`, `RESULTS`) and illegal transition rejection (06.01, 06.02).
-    3. Game clock, countdown timers, and progressive difficulty / speed ramping curve (06.06).
-    4. Health reaching zero triggers `GAME_OVER` event and results transition (06.05).
-    5. Parent pause key and auto-pause when player leaves zone (06.03, 06.04).
-    6. Close Gap G11 by ensuring pause events use `{"reason": "parent_key"}`.
+- **Begin Module 8: Game 1: Runner** in `engine/games/runner.py`:
+  - Milestone M1: Fully playable start-to-finish runner with keyboard.
+  - Implement 3-lane pseudo-perspective scrolling road, obstacles, and collectibles.
+  - Wire GameEngine, MechanicsManager, DisplayManager, and AudioManager into a unified loop.
+  - Satisfy use cases 08.01 to 08.08.
 
 ### Known open items
-See "Known gaps and open items" in `docs/progress_tracker.md` (G1 to G11).
+See "Known gaps and open items" in `docs/progress_tracker.md` (G1, G2, G4, G5, G6 open).

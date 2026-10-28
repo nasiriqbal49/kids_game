@@ -2,8 +2,8 @@
 
 **Last Updated:** 2026-10-28
 **Current Milestone Target:** Milestone M1 (Keyboard Runner)
-**Current Phase:** Phase A (Foundation) complete; Phase B (Playable game with keyboard) in progress (Module 4)
-**Verified unit tests (from real output):** 80 run, 80 passing (verified 2026-10-28) (`python -m unittest discover -s tests -t .`)
+**Current Phase:** Phase A (Foundation) complete; Phase B (Playable game with keyboard) in progress (Module 8)
+**Verified unit tests (from real output):** 106 run, 106 passing (verified 2026-10-28) (`python -m unittest discover -s tests -t .`)
 
 > **Rule for this file:** a use case is "Pass" only if a test carrying its ID exists, runs, and passed in output pasted by the owner. A module is DONE only when every P1 and P2 use case has a passing test; any deferred use case is listed explicitly below. See `docs/AI_START_HERE.md`.
 
@@ -16,9 +16,9 @@
 | **3** | **Input Adapter (Keyboard)** | **A** | **9** | **DONE (03.07 partial)** | 2026-10-28 | 9 of 9 have tests, 10 tests. 03.07 covers pause and debug only; quit and recalibrate keys deferred until those features exist. |
 | **4** | **Display and UI** | **B** | **13** | **DONE** | 2026-10-28 | 24 display tests (+6 pump). All 13 use cases verified. 1080p HUD scaling, low-health warning badge, particles toggle, player name, HDMI disconnect pause & 3s countdown (04.03), menu drawing & keyboard fallback (04.08, 04.09). |
 | **5** | **Audio Manager** | **B** | **10** | **DONE (05.09, 05.10 deferred, P3)** | 2026-10-28 | 7 tests. In-memory procedural synth (05.03), volume cap & mute (05.06), low-health alert state (05.07), pause/resume channels (05.08), priority channel for hits/game-over (05.02), state-controlled looping (05.05). |
-| **6** | **Game Engine Core** | **B** | **12** | **UP NEXT** | — | Fixed timestep loop, state machine, difficulty curve, timer management. |
-| 7 | Game Mechanics Library | B | 15 | PENDING | - | Spawning, hitboxes, power-ups. |
-| 8 | Game 1: Runner | B | 9 | PENDING | - | Playable keyboard game (Milestone M1). |
+| **6** | **Game Engine Core** | **B** | **12** | **DONE (06.12 deferred, P3)** | 2026-10-28 | 11 tests. Fixed timestep loop (06.07), state machine transitions & legal table (06.01, 06.02), parent pause & zone auto-pause (06.03, 06.04), zero health game over (06.05), difficulty ramp (06.06), error boundary (06.08), idle timeout (06.09), quit mid-game (06.10), reset (06.11). 06.12 session reminder deferred (P3). |
+| **7** | **Game Mechanics Library** | **B** | **15** | **DONE** | 2026-10-28 | 15 tests. Cleared by jump/duck/lean (07.01, 07.05, 07.14), damage & 1.0s invulnerability (07.02, 07.03), timing feedback & forgiving hitboxes (07.04), powerup expiration & refresh (07.06, 07.07), shield absorb (07.08), health refill bonus points (07.09), minimum spawn spacing (07.10), streak reset on hit (07.11), airborne high-bar collision (07.12), slow_down speed scale (07.13), lane barrier collision (07.14), off-screen pruning for flat memory (07.15). |
+| 8 | Game 1: Runner | B | 9 | UP NEXT | - | Milestone M1: Runner game loop, 3-lane road renderer, obstacle patterns, keyboard play start-to-finish. |
 | 9 | Camera Manager | C | 14 | PENDING | - | OpenCV frame acquisition thread. |
 | 10 | Debug & Replay Tools | C | 9 | PENDING | - | Landmark recorder and visual overlay. |
 | 11 | Pose Tracker | C | 12 | PENDING | - | MediaPipe body tracking at 30 FPS. |
@@ -45,7 +45,9 @@
 | `tests/test_input_keyboard.py` | 10 |
 | `tests/test_logger.py` | 5 |
 | `tests/test_audio.py` | 7 |
-| **Total** | **80** |
+| `tests/test_game_engine.py` | 11 |
+| `tests/test_mechanics.py` | 15 |
+| **Total** | **106** |
 
 ---
 
@@ -126,6 +128,42 @@
   - `05.10` Audio latency calibration test: **Deferred (P3)**
 
 
+### Module 6: Game Engine Core
+- **Files:** `engine/game_engine.py`, `tests/test_game_engine.py` (11 tests)
+- **Use cases verified:**
+  - `06.01` Normal state progression (MENU -> PROFILE_SELECT -> COUNTDOWN -> PLAYING): **Pass** (`test_06_01`)
+  - `06.02` Illegal transitions rejected; safe return to MENU always allowed: **Pass** (`test_06_02`)
+  - `06.03` Pause and resume via event signals: **Pass** (`test_06_03`)
+  - `06.04` Player out of zone past 1.0s grace period auto-pauses: **Pass** (`test_06_04`)
+  - `06.05` Health reaching zero fires GAME_OVER and transitions to RESULTS: **Pass** (`test_06_05`)
+  - `06.06` Difficulty speed ramps smoothly over time up to speed cap: **Pass** (`test_06_06`)
+  - `06.07` Fixed-timestep accumulator clamps lag spikes to max 5 catch-up steps: **Pass** (`test_06_07`)
+  - `06.08` Crash in game module safely caught, publishes ERROR, recovers to MENU: **Pass** (`test_06_08`)
+  - `06.09` Idle timeout in paused state returns to MENU: **Pass** (`test_06_09`)
+  - `06.10` Quit mid-game discards partial run and returns to MENU: **Pass** (`test_06_10`)
+  - `06.11` reset_game restores metrics to fresh run defaults: **Pass** (`test_06_11`)
+  - `06.12` Break reminder: **Deferred (P3)**
+
+### Module 7: Game Mechanics Library
+- **Files:** `engine/mechanics/__init__.py`, `engine/mechanics/entities.py`, `engine/mechanics/manager.py`, `tests/test_mechanics.py` (15 tests)
+- **Use cases verified:**
+  - `07.01` JUMP clears low hurdle, awards points, increments streak: **Pass** (`test_07_01`)
+  - `07.02` Collision inflicts damage and triggers 1.0s invulnerability window: **Pass** (`test_07_02`)
+  - `07.03` Multiple collisions within invulnerability window deal damage only once: **Pass** (`test_07_03`)
+  - `07.04` Timing feedback ('too_late'/'too_early') and forgiving hitboxes: **Pass** (`test_07_04`)
+  - `07.05` DUCK clears high bar: **Pass** (`test_07_05`)
+  - `07.06` Timed power-ups expire and fire POWERUP_EXPIRED event: **Pass** (`test_07_06`)
+  - `07.07` Duplicate power-up pickup refreshes duration timer: **Pass** (`test_07_07`)
+  - `07.08` Shield absorbs collision: shield consumed, zero health lost: **Pass** (`test_07_08`)
+  - `07.09` Health refill at full health converts to bonus score without overflow: **Pass** (`test_07_09`)
+  - `07.10` Spawner computes and enforces minimum safe distance between obstacles: **Pass** (`test_07_10`)
+  - `07.11` Streak resets to 0 and multiplier drops to 1.0 on hit: **Pass** (`test_07_11`)
+  - `07.12` Airborne player jumping into high bar registers collision: **Pass** (`test_07_12`)
+  - `07.13` slow_down power-up scales effective world scroll speed: **Pass** (`test_07_13`)
+  - `07.14` Lane barrier collides in active lane, clears when player changed lane: **Pass** (`test_07_14`)
+  - `07.15` Off-screen obstacles (z < -100) pruned to keep memory flat: **Pass** (`test_07_15`)
+
+
 ---
 
 ## Known gaps and open items
@@ -142,4 +180,4 @@
 | G8 | Make partial Module 4 items real: HUD scales to surface size, draws player name (04.12), consumes `reduced_effects` (04.10), red low-health bar and badge (04.06) | P2 | **Closed** (17 display tests pass) |
 | G9 | Real-hardware checks: TV on display index 1, fullscreen at 1080p, TV Game Mode, audio over HDMI | P1 | **Closed** (Verified in `main.py` interactive runner) |
 | G10 | Main loop must own the pygame event pump: call `pygame.event.get()` once per frame, pass the list to `DisplayManager.process_window_events(events)`, then route the returned key events to the keyboard adapter | P1 | **Closed** (`engine/event_pump.py`, 6 tests) |
-| G11 | `input_keyboard.py` sends pause payload as `{"action": "toggle"}`, whereas `event_contracts.md` specifies `{"reason": "parent_key"}`. Align when building Game Engine (Module 6). | Low | Open |
+| G11 | input_keyboard.py sends pause payload as {"action": "toggle"}, whereas event_contracts.md specifies {"reason": "parent_key"}. Align when building Game Engine (Module 6). | Low | **Closed** (2026-10-28) |
