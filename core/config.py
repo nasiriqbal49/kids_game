@@ -108,6 +108,17 @@ def _unflatten_dict(d: dict) -> dict:
     return result
 
 
+# Settings that are safe to change while the game is running (UC 01.09).
+# Everything else waits until the next game start.
+LIVE_SAFE_KEYS = {
+    "audio.volume",
+    "audio.mute",
+    "audio.sfx_enabled",
+    "audio.music_enabled",
+    "logging.level",
+}
+
+
 class Config:
     def __init__(self, file_path: Path = DEFAULT_CONFIG_PATH):
         self.file_path = Path(file_path)
@@ -136,7 +147,54 @@ class Config:
 
     def to_dict(self) -> Dict[str, Any]:
         return deepcopy(self._data)
+    def reload(self) -> list:
+        """Re-read the settings file while the game runs (UC 01.09).
 
+        Live-safe settings (volume, mute, log level) apply immediately.
+        All other changes wait in a pending list until apply_pending() is called,
+        for example at the next game start. A broken or missing file changes nothing.
+        Returns the list of keys whose value in the file differs from the running value.
+        """
+        if not self.file_path.exists():
+            log.warning("Reload skipped: %s does not exist. (UC 01.09)", self.file_path)
+            return []
+
+        raw = self._read_json_or_backup()
+        if raw is None:
+            log.warning("Reload failed. Keeping the current settings. (UC 01.09)")
+            return []
+
+        new_flat = _flatten_dict(self._validate_and_merge(raw))
+        new_flat.update(self._cli_overrides)  # command-line overrides keep winning
+        current_flat = _flatten_dict(self._data)
+        changed = [k for k, v in new_flat.items() if v != current_flat.get(k)]
+
+        self._pending = {}
+        for key in changed:
+            if key in LIVE_SAFE_KEYS:
+                self.set(key, new_flat[key])
+                log.info("Live setting changed: %s = %r (UC 01.09)", key, new_flat[key])
+            else:
+                self._pending[key] = new_flat[key]
+                log.info("Setting '%s' changed in the file; it applies at the next game start. (UC 01.09)", key)
+
+        self._apply_cross_checks()
+        return changed
+
+    def has_pending_changes(self) -> bool:
+        """True if reload() found changes that are still waiting for a safe moment."""
+        return bool(self._pending)
+
+    def apply_pending(self) -> list:
+        """Apply the changes that were waiting, for example at the start of a new game (UC 01.09)."""
+        applied = list(self._pending)
+        for key, value in self._pending.items():
+            self.set(key, value)
+            log.info("Pending setting applied: %s = %r (UC 01.09)", key, value)
+        self._pending = {}
+        self._apply_cross_checks()
+        return applied
+    
     def load(self, cli_args: list = None) -> None:
         """Loads config, validates, applies CLI overrides, and saves defaults if needed."""
         self._cli_overrides = {}

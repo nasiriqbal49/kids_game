@@ -88,6 +88,57 @@ class TestConfigModule(unittest.TestCase):
         cfg.load(cli_args=["--display.fullscreen=flase"])
         self.assertEqual(cfg.get("display.fullscreen"), True)
 
+    def _write_cfg(self, data):
+        with open(self.cfg_file, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+
+    def test_01_09_file_change_does_nothing_until_reload(self):
+        """UC 01.09: Editing the file while the game runs changes nothing by itself."""
+        cfg = Config(file_path=self.cfg_file)
+        self._write_cfg({"audio": {"volume": 20}})
+        self.assertEqual(cfg.get("audio.volume"), 80)
+
+    def test_01_09_reload_applies_live_safe_settings_and_holds_the_rest(self):
+        """UC 01.09: Volume applies at once; other settings wait for the next game start."""
+        cfg = Config(file_path=self.cfg_file)
+        self._write_cfg({"audio": {"volume": 20}, "camera": {"width": 1280}})
+
+        changed = cfg.reload()
+
+        self.assertIn("audio.volume", changed)
+        self.assertIn("camera.width", changed)
+        self.assertEqual(cfg.get("audio.volume"), 20)     # live-safe: applied now
+        self.assertEqual(cfg.get("camera.width"), 640)    # held back
+        self.assertTrue(cfg.has_pending_changes())
+
+        applied = cfg.apply_pending()                     # next game start
+
+        self.assertEqual(applied, ["camera.width"])
+        self.assertEqual(cfg.get("camera.width"), 1280)
+        self.assertFalse(cfg.has_pending_changes())
+
+    def test_01_09_reload_with_broken_file_keeps_current_settings(self):
+        """UC 01.09: A broken file during reload changes nothing and does not crash."""
+        cfg = Config(file_path=self.cfg_file)
+        cfg.set("audio.volume", 33)
+        with open(self.cfg_file, "w", encoding="utf-8") as f:
+            f.write("{ broken")
+
+        changed = cfg.reload()
+
+        self.assertEqual(changed, [])
+        self.assertEqual(cfg.get("audio.volume"), 33)
+
+    def test_01_09_command_line_override_still_wins_after_reload(self):
+        """UC 01.09: A command-line override is not undone by reloading the file."""
+        cfg = Config(file_path=self.cfg_file)
+        cfg.load(cli_args=["--audio.volume=30"])
+        self._write_cfg({"audio": {"volume": 70}})
+
+        cfg.reload()
+
+        self.assertEqual(cfg.get("audio.volume"), 30)
+
     def test_01_06_cli_override(self):
         """UC 01.06: Command-line arguments can override config settings."""
         cfg = Config(file_path=self.cfg_file)
