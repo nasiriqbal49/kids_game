@@ -16,7 +16,10 @@ kids_game/
 │   ├── input_keyboard.py
 │   └── logger.py
 ├── docs
+│   ├── AI_START_HERE.md
+│   ├── event_contracts.md
 │   ├── full_game_plan.md
+│   ├── git_commits.md
 │   ├── issues_and_resolutions.md
 │   ├── master_ai_handoff.md
 │   ├── progress_tracker.md
@@ -27,12 +30,14 @@ kids_game/
 ├── tests
 │   ├── __init__.py
 │   ├── test_config.py
-│   └── test_event_bus.py
+│   ├── test_event_bus.py
+│   ├── test_input_keyboard.py
+│   └── test_logger.py
 ├── tools
-│   └── show_tree.py
+│   ├── show_tree.py
+│   └── update_git_commits.py
 ├── .gitignore
 ├── config.json
-├── Kids_Motion_Game_Plan.pdf
 └── main.py
 ```
 
