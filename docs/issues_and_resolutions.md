@@ -37,3 +37,65 @@ This document tracks every error, edge-case hurdle, or design correction encount
 - **Resolution:** Replaced the line with direct subscription:
   `self.bus.subscribe(EventType.GAME_PAUSE, lambda e: received.append(e.name))`
 - **Status:** **Resolved & Verified**
+
+
+
+---
+
+### Issue #005: Test 02.11 never ran; Phase A status was over-claimed
+- **Module:** Module 2 (Event Bus tests) and project docs
+- **Symptom:** The handoff and tracker claimed "24 tests passing, 100% certified", but only 23 tests actually ran.
+- **Root Cause:** `test_02_11_shutdown_flushes_and_stops_acceptance` was indented at column 0, outside the test class, so `unittest` never discovered it. Tests for 01.05, 01.07, 01.08 and 03.06 did not exist but were marked Pass.
+- **Resolution:** Indented the method into the class (24 tests ran). Added the missing tests. Rewrote handoff and tracker so "Pass" requires a real, running test.
+- **Lesson:** After adding tests, confirm the total count increased by the expected number.
+- **Status:** **Resolved & Verified**
+
+---
+
+### Issue #006: Event Bus thread safety and failure counting
+- **Module:** Module 2 (UC 02.03, 02.04, 02.07, 02.11)
+- **Symptom:** `post()` congestion path could crash with concurrent threads; a subscriber was silenced forever after 5 total errors in a session; a lock object existed but was never used.
+- **Resolution:** Real `threading.Lock` around the queue in `post()`, `drain()` and `shutdown()`; failure count resets after a successful call (consecutive failures). Added `test_02_12` (failure reset) and `test_02_13` (concurrent posting guard).
+- **Incident:** The first attempt placed the `else:` branch aligned with the `for` loop instead of the `try`, which reset the count on every publish. Test `test_02_03` caught it. Correct placement: `else:` at the same indentation as `try:`.
+- **Status:** **Resolved & Verified**
+
+---
+
+### Issue #007: Keyboard latency simulation published from a background thread
+- **Module:** Module 3 (UC 03.09)
+- **Symptom:** The delayed-event thread called `bus.publish()` directly, breaking the cross-thread rule.
+- **Resolution:** The delayed thread now calls `bus.post()`; the event is created at key-press time so its timestamp is real; the test drains the bus. 
+- **Status:** **Resolved & Verified**
+
+---
+
+### Issue #008: Logging settings in config.json were ignored
+- **Module:** Module 1 (UC 01.07, 01.08)
+- **Symptom:** `main.py` hard-coded DEBUG; `logging.level`, `max_bytes`, `backup_count` did nothing. Old file handlers were not closed on reconfigure. Warnings emitted before the file handler existed never reached the log file.
+- **Resolution:** Added `configure_from(cfg)`; `main.py` starts logging with defaults, loads config, then reapplies logging from config. Handlers are closed when replaced; warnings are emitted after all handlers exist. Added `tests/test_logger.py` (5 tests).
+- **Status:** **Resolved & Verified**
+
+---
+
+### Issue #009: Keyboard tests read the real config.json
+- **Module:** Module 3 tests
+- **Symptom:** `setUp` created the adapter with the real project config, so editing key bindings could break tests.
+- **Resolution:** Tests now use a `FakeConfig`. Rule added to AI_START_HERE: tests never touch real `config.json`, `profiles/` or `logs/`.
+- **Status:** **Resolved & Verified**
+
+---
+
+### Issue #010: Config loader weaknesses
+- **Module:** Module 1 (UC 01.03, 01.04, 01.06, 05.06)
+- **Symptoms:** JSON that is valid but not an object was silently ignored; `true` accepted for number settings; CLI overrides skipped after a broken file; a typo like `--display.fullscreen=flase` became False; volume could exceed the volume cap.
+- **Resolution:** Non-object JSON treated as malformed (backed up to `.bad`); bool rejected for number settings; overrides always applied; strict bool parsing; volume lowered to the cap. 5 tests added.
+- **Status:** **Resolved & Verified**
+
+---
+
+### Issue #011: Push rejected after the PDF was deleted on GitHub
+- **Module:** Setup / Version Control
+- **Symptom:** `git push` rejected (`fetch first`).
+- **Root Cause:** The owner deleted `Kids_Motion_Game_Plan.pdf` on GitHub, creating a commit not present locally.
+- **Resolution:** `git pull --no-rebase --no-edit origin main`, then `git push`. The PDF deletion is intentional; the `.md` plan files are now the source of truth.
+- **Status:** **Resolved**
