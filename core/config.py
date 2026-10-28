@@ -147,6 +147,8 @@ class Config:
 
     def to_dict(self) -> Dict[str, Any]:
         return deepcopy(self._data)
+
+    
     def reload(self) -> list:
         """Re-read the settings file while the game runs (UC 01.09).
 
