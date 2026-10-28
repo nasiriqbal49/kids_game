@@ -108,3 +108,29 @@ This document tracks every error, edge-case hurdle, or design correction encount
 - **Root Cause:** `import pygame` was omitted from the top-level imports in `tests/test_display.py`. Additionally, because `tearDown()` shuts down pygame video via `close()`, `process_window_events()` returned early on `pygame.get_init() == False`.
 - **Resolution:** Added `import pygame` at the top of `tests/test_display.py` and ensured `pygame.init()` is active in `test_04_13`.
 - **Status:** **Resolved & Verified**
+
+---
+
+### Issue #013: Focus-loss pause used the wrong pygame event
+- **Module:** Module 4 (UC 04.13)
+- **Symptom:** Alt+Tab did not pause the game, but moving the mouse pointer out of the window did.
+- **Root Cause:** The code checked `ACTIVEEVENT` with `state == 1`, which is mouse focus in pygame (input focus is 2). The test used a fake event with the same wrong value, so it passed while the real behaviour was wrong. In pygame 2 the correct event is `WINDOWFOCUSLOST`.
+- **Resolution:** Handle `pygame.WINDOWFOCUSLOST`; added a test that mouse-leave does not pause.
+- **Lesson:** A test that fakes the input proves nothing unless the fake matches what the real system sends.
+- **Status:** **Resolved & Verified**
+
+---
+
+### Issue #014: Display swallowed keyboard events; window close published a pause
+- **Module:** Module 4 / Module 3 integration
+- **Symptom:** `process_window_events()` read every pygame event, so key presses would never reach the keyboard adapter. Closing the window published `GAME_PAUSE` with a reason (`window_close`) that is not in the event contract.
+- **Resolution:** `process_window_events(events)` handles only window events and returns all other events to the main loop. Window close sets `quit_requested`. Four tests added. Rule recorded as gap G10: the main loop owns the pygame event pump.
+- **Status:** **Resolved & Verified**
+
+---
+
+### Issue #015: Module 4 status over-claimed; housekeeping files broken
+- **Module:** Docs and project hygiene
+- **Symptom:** The tracker marked 04.07, 04.10 and 04.12 as Pass on constants-only, flag-only or helper-only tests, and still listed gap G3 as open after the contracts were written. `docs/project_directory_structure.md` was empty (0 bytes). `requirements.txt` was saved as UTF-16 (shown as a binary file on GitHub).
+- **Resolution:** Tracker and handoff rewritten to show 6 verified, 4 partial, 3 not started. Directory doc regenerated with `python tools/show_tree.py --update`; `requirements.txt` re-saved as plain text. Both housekeeping fixes to be confirmed with `git show --stat HEAD`.
+- **Status:** **Resolved (housekeeping to be confirmed)**

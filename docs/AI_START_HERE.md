@@ -123,17 +123,15 @@ Also run:
 
 Build order (do not reorder without owner approval): 1 Config and Logging, 2 Event Bus, 3 Keyboard Input, 4 Display and UI, 5 Audio, 6 Game Engine Core, 7 Mechanics Library, 8 Game 1 Runner (Milestone M1), 9 Camera Manager, 10 Debug and Replay, 11 Pose Tracker, 12 Zone and Calibration, 13 Player Lock, 14 Action Detector (M2), 15 Profile Manager, 16 Measurement Capture (M3), 17 Phone Cameras (M4), 18 Games 2 and 3 (M5), 19 Floor Projection Prep (M6).
 
-## 9. Known open items (also tracked in the handoff file)
+## 9. Known open items (also tracked in the handoff and tracker files)
 
-Phase A cleanup identified after an independent review (update this list as items are closed):
+Phase A cleanup (A1 to A7) is complete as of 2026-10-28, including the event payload contracts in `docs/event_contracts.md`. The live list of gaps (G1 to G10) is in `docs/progress_tracker.md`; keep it current.
 
-- [ ] A1 Test 02.11 was unindented and never ran (fixed: now 24 tests run).
-- [ ] A2 Event Bus: real lock in `post()`/`drain()`/`shutdown()`, consecutive failure counting that resets on success.
-- [ ] A3 Keyboard latency simulation must use `bus.post()` from its thread, not `bus.publish()`.
-- [ ] A4 Logging settings (`level`, `max_bytes`, `backup_count`) must be applied from config; add logger tests for 01.07 and 01.08.
-- [ ] A5 Missing tests: 01.05 (typo detection), 03.06 (key remapping); config hardening (valid JSON that is not an object, bool accepted as int, overrides after malformed file, volume vs max_volume_cap); build 01.09 and 01.10.
-- [ ] A6 Correct `master_ai_handoff.md` and `progress_tracker.md` so they state only what tests prove.
-- [ ] A7 Define payload contracts for events (for example HEALTH_CHANGED, SCORE_CHANGED, OBSTACLE_HIT) before Modules 4 to 7.
+Lessons from independent reviews (apply them every time):
+- A test that fakes its input proves nothing unless the fake matches what the real system sends (see issue #013).
+- A "Pass" backed only by a constants check, a flag, or a helper function that nothing uses is **Partial**, not Pass (see issue #015).
+- One component must own each shared resource. The main loop owns the pygame event pump; no module may consume events that belong to another (see issue #014).
+- After adding tests, confirm the total count rose by the number added, and check that new files in `docs/` are not empty.
 
 ## 10. Things you must not do
 
