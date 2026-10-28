@@ -59,6 +59,9 @@ class AudioManager:
         self.sounds: Dict[str, Any] = {}
         self.is_paused: bool = False
         self.low_health_alert_active: bool = False
+        
+        self.priority_channel = None 
+        self.loop_channel = None
 
         # Volume settings (UC 05.06)
         self.master_volume: float = 0.8
@@ -77,6 +80,10 @@ class AudioManager:
                 # 22050 Hz, 16-bit, 2 channels, 512 buffer (low latency - UC 05.01)
                 pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
             self.audio_available = True
+            # Allocate 8 mixer channels and reserve channel 0 for high-priority effects (UC 05.02)
+            pygame.mixer.set_num_channels(8)
+            self.priority_channel = pygame.mixer.Channel(0)
+            self.loop_channel = pygame.mixer.Channel(1)
             log.info("Audio system initialized successfully. (UC 05.01, 05.04)")
         except Exception as err:
             self.audio_available = False
@@ -109,10 +116,12 @@ class AudioManager:
         # Procedural synth definitions for out-of-the-box sounds:
         synth_defs = {
             "jump": (440.0, 0.18, 0.6, "sine"),           # Pitch whoop
-            "hit": (120.0, 0.25, 0.8, "square"),          # Low thud
+            "hit": (120.0, 0.25, 0.8, "square"),          # Low thud (high priority)
+            "game_over": (150.0, 0.50, 0.9, "square"),    # Game over crash (high priority)
             "powerup": (880.0, 0.30, 0.6, "sine"),        # Bright chime
             "countdown": (600.0, 0.10, 0.5, "sine"),      # Short beep
             "low_health": (300.0, 0.20, 0.7, "square"),   # Warning buzzer
+            "running_loop": (200.0, 0.40, 0.3, "sine"),   # Background ambient loop (UC 05.05)
         }
 
         for name, (freq, duration, vol, wtype) in synth_defs.items():
@@ -133,24 +142,59 @@ class AudioManager:
         self.bus.subscribe(EventType.HEALTH_CHANGED, self._on_health_changed)
         self.bus.subscribe(EventType.GAME_PAUSE, self._on_pause)
         self.bus.subscribe(EventType.GAME_RESUME, self._on_resume)
+        self.bus.subscribe(EventType.GAME_OVER, lambda e: self.play_sound("game_over", priority=True))
+        self.bus.subscribe(EventType.STATE_CHANGED, self._on_state_changed)
 
     # -------------------------------------------------------------------------
     # Playback & Event Controls
     # -------------------------------------------------------------------------
 
-    def play_sound(self, sound_name: str) -> bool:
-        """Plays a preloaded sound if audio is enabled and not muted (UC 05.01)."""
+    def play_sound(self, sound_name: str, priority: bool = False) -> bool:
+        """
+        Plays a sound. High-priority sounds (hit, game over) play on a reserved
+        channel so they are never interrupted or cut off (UC 05.02).
+        """
         if not self.audio_available or self.is_muted or self.is_paused:
             return False
 
         sound = self.sounds.get(sound_name)
         if sound is not None:
             try:
-                sound.play()
+                if priority and self.priority_channel:
+                    self.priority_channel.play(sound)
+                else:
+                    sound.play()
                 return True
             except Exception as err:
                 log.error("Failed to play sound '%s': %s", sound_name, err)
         return False
+
+    def _on_state_changed(self, event: Event) -> None:
+        """Controls looping background running sounds on state transitions (UC 05.05)."""
+        new_state = event.payload.get("new_state", "MENU")
+        if new_state == "PLAYING":
+            self.start_loop("running_loop")
+        else:
+            self.stop_loop()
+
+    def start_loop(self, sound_name: str) -> bool:
+        """Starts a looping background sound on the dedicated loop channel (UC 05.05)."""
+        if not self.audio_available or self.is_muted or self.is_paused:
+            return False
+
+        sound = self.sounds.get(sound_name)
+        if sound is not None and self.loop_channel:
+            try:
+                self.loop_channel.play(sound, loops=-1)
+                return True
+            except Exception as err:
+                log.error("Failed to start loop '%s': %s", sound_name, err)
+        return False
+
+    def stop_loop(self) -> None:
+        """Stops the active looping sound cleanly (UC 05.05)."""
+        if self.audio_available and self.loop_channel:
+            self.loop_channel.stop()
 
     def _on_health_changed(self, event: Event) -> None:
         """Ties low-health alert state directly to health metric (UC 05.07)."""

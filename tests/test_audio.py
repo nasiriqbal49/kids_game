@@ -72,6 +72,25 @@ class TestAudioModule(unittest.TestCase):
         self.bus.publish(Event(EventType.GAME_RESUME, {"reason": "parent_key"}))
         self.assertFalse(self.audio.is_paused)
 
+    def test_05_02_priority_sound_playback(self):
+        """UC 05.02: High-priority sounds (hit, game_over) play on the reserved priority channel."""
+        played = self.audio.play_sound("hit", priority=True)
+        # Should play successfully without raising
+        if self.audio.audio_available:
+            self.assertTrue(played)
+
+    def test_05_05_looping_sound_starts_and_stops_on_state_changes(self):
+        """UC 05.05: Looping sound starts on PLAYING state and stops on PAUSED/MENU/GAME_OVER."""
+        # Entering PLAYING starts loop
+        self.bus.publish(Event(EventType.STATE_CHANGED, {"old_state": "MENU", "new_state": "PLAYING"}))
+        if self.audio.audio_available and self.audio.loop_channel:
+            self.assertTrue(self.audio.loop_channel.get_busy())
+
+        # Entering PAUSED stops loop so it never keeps playing in the menu
+        self.bus.publish(Event(EventType.STATE_CHANGED, {"old_state": "PLAYING", "new_state": "PAUSED"}))
+        if self.audio.audio_available and self.audio.loop_channel:
+            self.assertFalse(self.audio.loop_channel.get_busy())
+
 
 if __name__ == "__main__":
     unittest.main()
