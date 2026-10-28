@@ -42,7 +42,9 @@
 | `tests/test_event_bus.py` | 13 |
 | `tests/test_input_keyboard.py` | 10 |
 | `tests/test_logger.py` | 5 |
-| **Total** | **43** |
+| `tests/test_display.py` | 5 |
+
+| **Total** | **48** |
 
 ---
 
@@ -89,6 +91,15 @@
   - `03.07` Parent keys need Ctrl: **Pass for pause and debug only**. Quit and recalibrate keys deferred.
   - `03.08` Keyboard can be disabled for camera-only play: **Pass**
   - `03.09` Simulated latency, delivered through `bus.post()` and `bus.drain()`: **Pass**
+
+### Module 4: Display and UI (In Progress)
+- **Files Created:** `engine/__init__.py`, `engine/display.py`, `tests/test_display.py`
+- **Use Cases Verified:**
+  - `04.01` (TV detected when second display present): **Pass** (`test_04_01`)
+  - `04.02` (TV not detected, safe fallback to laptop display 0): **Pass** (`test_04_02`)
+  - `04.04` (Initializes at 1080p target resolution): **Pass** (`test_04_04`)
+  - `04.05` (HUD state updates within 1 frame upon events): **Pass** (`test_04_05`)
+  - `04.06` (Low health warning threshold triggers visual warning state): **Pass** (`test_04_06`)
 
 ---
 

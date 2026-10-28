@@ -25,11 +25,15 @@ kids_game/
 │   ├── progress_tracker.md
 │   ├── project_directory_structure.md
 │   └── use_case_catalogue.md
+├── engine
+│   ├── __init__.py
+│   └── display.py
 ├── logs
 │   └── kidsgame.log
 ├── tests
 │   ├── __init__.py
 │   ├── test_config.py
+│   ├── test_display.py
 │   ├── test_event_bus.py
 │   ├── test_input_keyboard.py
 │   └── test_logger.py
@@ -38,7 +42,8 @@ kids_game/
 │   └── update_git_commits.py
 ├── .gitignore
 ├── config.json
-└── main.py
+├── main.py
+└── requirements.txt
 ```
 
 ---

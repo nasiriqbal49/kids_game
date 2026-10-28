@@ -38,21 +38,18 @@
 ## 4. Current Exact State & Next Immediate Step
 
 ### Current State (2026-10-28)
-- **Phase A (Foundation) is complete**, after an independent review that found and fixed these issues (details in `issues_and_resolutions.md`, #005 to #012): an unindented test that never ran, event bus thread-safety and failure counting, keyboard latency thread rule, ignored logging config, missing tests, config hardening, over-claimed status docs.
-- Module 1: 9 of 10 use cases verified; **01.10 (privacy filter for logs) deferred, P3**.
-- Module 2: 11 of 11 verified.
-- Module 3: 9 of 9 have tests; 03.07 covers pause and debug only (quit and recalibrate deferred).
-- Git: all work committed and pushed to `main` (last verified push after the 01.09 reload commit; confirm with `git status` and `git log --oneline -5`).
+- **Phase A (Foundation):** 100% COMPLETE (Modules 1, 2, 3 verified).
+- **Gap G3:** Closed (`docs/event_contracts.md` created and committed).
+- **Module 4 (Display and UI):** In progress (Slice 1 complete).
+  - Target display selection & TV fallback implemented (04.01, 04.02, 04.04).
+  - Event-driven HUD state updates implemented (04.05, 04.06).
+- **Total Test Count:** **48 verified passing tests** across 5 test suites.
+- **Git status:** Clean, working tree in sync.
 
 ### Next Immediate Step
-1. **Resume check:** ask the owner to run `git pull origin main`, `git status`, and `python -m unittest discover -s tests -t .` and confirm 43 tests pass.
-2. **Gap G3 (small step, before Module 4):** define payload contracts for the events Modules 4 to 8 will use (for example HEALTH_CHANGED, SCORE_CHANGED, OBSTACLE_HIT, STREAK_CHANGED, SPEED_CHANGED, STATE_CHANGED, COUNTDOWN_TICK): which fields each carries, who publishes, who listens. Add as `docs/event_contracts.md` and keep `core/events.py` in sync. Ask the owner for approval before changing the event catalogue.
-3. **Optional, small:** 01.10 privacy filter for logs (see tracker gap G1).
-4. **Module 4: Display and UI** in `engine/display.py`:
-   - Install pygame in the venv: `pip install pygame` and create `requirements.txt` with `pip freeze`.
-   - Use cases 04.01 to 04.13 from `docs/use_case_catalogue.md`; read them all first.
-   - Open a 1080p full-screen window on the TV (second display) with laptop-window fallback (04.02), HUD (04.05, 04.06), menus, auto-pause if HDMI disconnects (04.03).
-   - First slice: a window that opens on the chosen display, runs at a steady 60 FPS, and shows a test HUD updated from events (the "Done when" in the plan). Use the keyboard adapter for input.
+- **Module 4 Slice 2 (Drawing & Safety):**
+  - Implement visual rendering routines in `engine/display.py`: `draw_hud()`, 10-ft readable fonts (04.07), soft photosensitive hit flash (04.11), and focus loss event dispatch (04.13).
+  - Add tests in `tests/test_display.py` for Slice 2 use cases.
 
 ### Known open items
 See "Known gaps and open items" in `docs/progress_tracker.md` (G1 to G6).
