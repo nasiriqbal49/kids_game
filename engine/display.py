@@ -55,6 +55,7 @@ class DisplayManager:
 
         # Safety & Performance Controls (UC 04.10, 04.11)
         self.reduced_effects: bool = False
+        self.quit_requested: bool = False
         self._last_flash_time: float = -1.0
         self._flash_active_until: float = -1.0
 
@@ -143,22 +144,29 @@ class DisplayManager:
             self.reduced_effects = False
             log.info("Frame rate recovered to %.1f FPS. Full effects restored.", current_fps)
 
-    def process_window_events(self) -> None:
+    def process_window_events(self, events: Optional[list] = None) -> list:
         """
-        Checks OS / Pygame window events.
-        Detects focus loss and triggers auto-pause (UC 04.13).
+        Handles window-level events and returns every other event untouched, so the
+        main loop can pass keyboard events on to the input adapter.
+        - Real focus loss (Alt+Tab, another window on top) pauses the game (UC 04.13).
+        - Closing the window sets quit_requested; it does NOT pause (the game loop decides).
+        Pass the list from pygame.event.get() once per frame, or leave it empty to read it here.
         """
-        if not pygame.get_init():
-            return
+        if events is None:
+            if not pygame.get_init():
+                return []
+            events = pygame.event.get()
 
-        for event in pygame.event.get():
+        remaining = []
+        for event in events:
             if event.type == pygame.QUIT:
-                self.bus.publish(Event(EventType.GAME_PAUSE, {"reason": "window_close"}))
-            elif event.type == pygame.ACTIVEEVENT:
-                # event.gain == 0 means window lost focus
-                if hasattr(event, "gain") and event.gain == 0 and event.state == 1:
-                    log.info("Window focus lost. Pausing game (UC 04.13).")
-                    self.bus.publish(Event(EventType.GAME_PAUSE, {"reason": "focus_loss"}))
+                self.quit_requested = True
+            elif event.type == pygame.WINDOWFOCUSLOST:
+                log.info("Window focus lost. Pausing game (UC 04.13).")
+                self.bus.publish(Event(EventType.GAME_PAUSE, {"reason": "focus_loss"}))
+            else:
+                remaining.append(event)
+        return remaining
 
     # -------------------------------------------------------------------------
     # Display Setup & Drawing Routines (UC 04.01, 04.04, 04.07)

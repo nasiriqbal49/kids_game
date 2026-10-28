@@ -128,24 +128,47 @@ class TestDisplayModule(unittest.TestCase):
         self.assertEqual(long_name, "Alexander...")
         self.assertLessEqual(len(long_name), 12)
 
-    def test_04_13_focus_loss_dispatches_pause(self):
-            """UC 04.13: Window focus loss emits GAME_PAUSE event."""
-            if not pygame.get_init():
-                pygame.init()
+    def test_04_13_real_focus_loss_event_pauses_game(self):
+        """UC 04.13: A real window focus-loss event (Alt+Tab) publishes GAME_PAUSE."""
+        pygame.init()
+        paused = []
+        self.bus.subscribe(EventType.GAME_PAUSE, lambda e: paused.append(e.payload.get("reason")))
 
-            paused_events = []
-            self.bus.subscribe(EventType.GAME_PAUSE, lambda e: paused_events.append(e.payload.get("reason")))
+        remaining = self.manager.process_window_events([pygame.event.Event(pygame.WINDOWFOCUSLOST)])
 
-            class FakeEvent:
-                type = pygame.ACTIVEEVENT
-                gain = 0
-                state = 1
+        self.assertEqual(paused, ["focus_loss"])
+        self.assertEqual(remaining, [])
 
-            import unittest.mock as mock
-            with mock.patch("pygame.event.get", return_value=[FakeEvent()]):
-                self.manager.process_window_events()
+    def test_04_13_mouse_leaving_window_does_not_pause(self):
+        """UC 04.13: Moving the mouse pointer out of the window must not pause the game."""
+        pygame.init()
+        paused = []
+        self.bus.subscribe(EventType.GAME_PAUSE, lambda e: paused.append(e.payload.get("reason")))
 
-            self.assertEqual(paused_events, ["focus_loss"])
+        mouse_leave = pygame.event.Event(pygame.ACTIVEEVENT, gain=0, state=pygame.APPMOUSEFOCUS)
+        self.manager.process_window_events([mouse_leave])
+
+        self.assertEqual(paused, [])
+
+    def test_04_13_key_events_pass_through_to_input_adapter(self):
+        """UC 04.13: The display must not swallow keyboard events; it returns them to the main loop."""
+        pygame.init()
+        key_event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_SPACE, mod=0, unicode=" ", scancode=44)
+
+        remaining = self.manager.process_window_events([key_event])
+
+        self.assertEqual(remaining, [key_event])
+
+    def test_04_13_window_close_requests_quit_without_pausing(self):
+        """UC 04.13: Closing the window sets quit_requested and does not publish GAME_PAUSE."""
+        pygame.init()
+        paused = []
+        self.bus.subscribe(EventType.GAME_PAUSE, lambda e: paused.append(e))
+
+        self.manager.process_window_events([pygame.event.Event(pygame.QUIT)])
+
+        self.assertTrue(self.manager.quit_requested)
+        self.assertEqual(paused, [])
 
 if __name__ == "__main__":
     unittest.main()
