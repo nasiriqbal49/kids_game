@@ -7,6 +7,7 @@ from core.event_bus import get_event_bus
 from core.input_keyboard import KeyboardInputAdapter
 from engine.display import DisplayManager
 from engine.event_pump import EventPump
+from engine.audio import AudioManager
 
 # 1. Setup Logging and Config
 setup_logging()
@@ -21,6 +22,7 @@ def run():
     bus = get_event_bus()
     keyboard = KeyboardInputAdapter(bus=bus, cfg=cfg)
     display = DisplayManager(bus=bus, cfg=cfg)
+    audio = AudioManager(bus=bus, cfg=cfg)
     pump = EventPump(display=display, keyboard=keyboard)
 
     # Open window (automatically picks laptop screen 0 in office; TV at home)
@@ -162,6 +164,7 @@ def run():
         pygame.display.flip()
 
     display.close()
+    audio.close()
     log.info("--- Test loop finished cleanly ---")
 
 

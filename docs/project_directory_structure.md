@@ -27,12 +27,14 @@ kids_game/
 │   └── use_case_catalogue.md
 ├── engine
 │   ├── __init__.py
+│   ├── audio.py
 │   ├── display.py
 │   └── event_pump.py
 ├── logs
 │   └── kidsgame.log
 ├── tests
 │   ├── __init__.py
+│   ├── test_audio.py
 │   ├── test_config.py
 │   ├── test_display.py
 │   ├── test_event_bus.py
