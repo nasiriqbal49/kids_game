@@ -1,5 +1,5 @@
 import time
-import queue
+import threading
 from typing import Callable, Dict, List, Optional, Set
 from collections import deque
 from core.events import Event, EventType, VALID_EVENT_NAMES
@@ -32,7 +32,7 @@ class EventBus:
         # Cross-thread safe queue (UC 02.07)
         self._max_queue_size = max_queue_size
         self._thread_queue: deque = deque()
-        self._queue_lock = queue.LifoQueue()  # Thread sync utility
+        self._queue_lock = threading.Lock()
 
         # Error tracking & isolation per subscriber (UC 02.03)
         self._failure_counts: Dict[Callable, int] = {}
@@ -125,6 +125,8 @@ class EventBus:
                 if failures >= self.max_subscriber_errors:
                     log.warning("Subscriber '%s' disabled after %d consecutive failures.",
                                 sub_name, self.max_subscriber_errors)
+                else:
+                    self._failure_counts.pop(callback, None)
 
     # -------------------------------------------------------------------------
     # Cross-Thread Asynchronous Queue (UC 02.04, 02.07)
@@ -132,11 +134,7 @@ class EventBus:
 
     def post(self, event: Event) -> bool:
         """
-        Thread-safe enqueueing from background threads (e.g., Camera or MediaPipe thread).
-        Never blocks the publisher.
-        If queue is full:
-          - Drops oldest non-critical events to protect 60 FPS pacing.
-          - Never drops critical events like GAME_OVER (UC 02.04).
+        Thread-safe enqueue from background threads. Never blocks the publisher.
         """
         if not self._is_active:
             log.warning("Post ignored: EventBus is shut down (UC 02.11).")
@@ -146,33 +144,28 @@ class EventBus:
             log.error("Cannot post unknown event '%s' (UC 02.05).", event.name)
             return False
 
-        # Queue congestion management (UC 02.04)
-        if len(self._thread_queue) >= self._max_queue_size:
-            if event.name in CRITICAL_EVENTS:
-                # Discard an older non-critical event to guarantee room for critical event
-                self._drop_oldest_non_critical()
-                self._thread_queue.append(event)
-                return True
-            else:
+        with self._queue_lock:
+            if len(self._thread_queue) >= self._max_queue_size:
+                if event.name in CRITICAL_EVENTS:
+                    self._drop_oldest_non_critical()
+                    self._thread_queue.append(event)
+                    return True
                 log.warning("EventBus queue full. Dropped non-critical event '%s' (UC 02.04).", event.name)
                 return False
 
-        self._thread_queue.append(event)
-        return True
+            self._thread_queue.append(event)
+            return True
 
     def drain(self, max_events: int = 150) -> int:
-        """
-        Drains cross-thread queued events and dispatches them on the main loop thread.
-        Call once per frame at the top of the main game loop (UC 02.07).
-        """
+        """Dispatch queued cross-thread events on the main loop thread (UC 02.07)."""
         processed = 0
-        while self._thread_queue and processed < max_events:
-            try:
+        while processed < max_events:
+            with self._queue_lock:
+                if not self._thread_queue:
+                    break
                 event = self._thread_queue.popleft()
-                self.publish(event)
-                processed += 1
-            except IndexError:
-                break
+            self.publish(event)
+            processed += 1
         return processed
 
     def _drop_oldest_non_critical(self) -> None:
@@ -226,18 +219,18 @@ class EventBus:
         log.info("EventBus shutdown initiated. Flushing queue (timeout: %.2fs)...", timeout_seconds)
         start_time = time.time()
 
-        while self._thread_queue and (time.time() - start_time) < timeout_seconds:
-            try:
+        while (time.time() - start_time) < timeout_seconds:
+            with self._queue_lock:
+                if not self._thread_queue:
+                    break
                 event = self._thread_queue.popleft()
-                self.publish(event)
-            except IndexError:
-                break
+            self.publish(event)
 
-        remaining = len(self._thread_queue)
+        with self._queue_lock:
+            remaining = len(self._thread_queue)
+            self._thread_queue.clear()
         if remaining > 0:
             log.warning("Shutdown timeout reached with %d pending events dropped (UC 02.11).", remaining)
-            self._thread_queue.clear()
-
         self._is_active = False
         log.info("EventBus shutdown complete.")
 

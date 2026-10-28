@@ -1,6 +1,7 @@
 import time
 import threading
 import unittest
+import logging
 from core.events import Event, EventType
 from core.event_bus import EventBus, CRITICAL_EVENTS
 
@@ -160,23 +161,61 @@ class TestEventBus(unittest.TestCase):
         self.assertFalse(EventBus.is_stale(fresh_event, max_age_seconds=0.5))
         self.assertTrue(EventBus.is_stale(old_event, max_age_seconds=0.5))
 
-def test_02_11_shutdown_flushes_and_stops_acceptance(self):
-        """UC 02.11: Shutdown flushes pending queue and rejects new events."""
-        received = []
-        self.bus.subscribe(EventType.GAME_PAUSE, lambda e: received.append(e.name))
+    def test_02_11_shutdown_flushes_and_stops_acceptance(self):
+            """UC 02.11: Shutdown flushes pending queue and rejects new events."""
+            received = []
+            self.bus.subscribe(EventType.GAME_PAUSE, lambda e: received.append(e.name))
 
-        # Enqueue one pending event
-        self.bus.post(Event(EventType.GAME_PAUSE))
+            # Enqueue one pending event
+            self.bus.post(Event(EventType.GAME_PAUSE))
 
-        # Shutdown with flush
-        self.bus.shutdown(timeout_seconds=0.2)
+            # Shutdown with flush
+            self.bus.shutdown(timeout_seconds=0.2)
 
-        # The pending event must have been flushed out to subscribers
-        self.assertEqual(received, [EventType.GAME_PAUSE])
+            # The pending event must have been flushed out to subscribers
+            self.assertEqual(received, [EventType.GAME_PAUSE])
 
-        # New events must be rejected after shutdown
-        self.assertFalse(self.bus.post(Event(EventType.JUMP)))
+            # New events must be rejected after shutdown
+            self.assertFalse(self.bus.post(Event(EventType.JUMP)))
 
+    def test_02_12_failure_count_resets_after_success(self):
+        """A subscriber is disabled only after consecutive failures."""
+        bus = EventBus(max_subscriber_errors=3)
+        calls = []
+
+        def flaky(e):
+            calls.append(e)
+            if len(calls) in (1, 2, 4, 5):
+                raise RuntimeError("boom")
+
+        bus.subscribe(EventType.JUMP, flaky)
+        for _ in range(7):
+            bus.publish(Event(EventType.JUMP))
+        self.assertEqual(len(calls), 7)
+
+    def test_02_13_concurrent_posting_is_thread_safe(self):
+        """Several threads posting into a small full queue must never crash."""
+        bus = EventBus(max_queue_size=50)
+        errors = []
+
+        def worker():
+            try:
+                for _ in range(1000):
+                    bus.post(Event(EventType.JUMP))
+                    bus.post(Event(EventType.GAME_OVER))
+            except Exception as err:
+                errors.append(err)
+
+        logging.disable(logging.CRITICAL)
+        try:
+            threads = [threading.Thread(target=worker) for _ in range(4)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+        finally:
+            logging.disable(logging.NOTSET)
+        self.assertEqual(errors, [])
 
 if __name__ == "__main__":
     unittest.main()
