@@ -112,6 +112,8 @@ class Config:
     def __init__(self, file_path: Path = DEFAULT_CONFIG_PATH):
         self.file_path = Path(file_path)
         self._data: Dict[str, Any] = deepcopy(DEFAULT_CONFIG)
+        self._cli_overrides: Dict[str, Any] = {}   # settings forced from the command line
+        self._pending: Dict[str, Any] = {}         # changes waiting for a safe moment (UC 01.09)
         self.load()
 
     def get(self, dot_key: str, default: Any = None) -> Any:
@@ -137,34 +139,56 @@ class Config:
 
     def load(self, cli_args: list = None) -> None:
         """Loads config, validates, applies CLI overrides, and saves defaults if needed."""
-        loaded_raw = None
+        self._cli_overrides = {}
+        self._pending = {}
 
         if not self.file_path.exists():
             log.info("No config file found at %s. Creating with defaults. (UC 01.01)", self.file_path)
             self._save_defaults()
             self._data = deepcopy(DEFAULT_CONFIG)
         else:
-            try:
-                with open(self.file_path, "r", encoding="utf-8") as f:
-                    loaded_raw = json.load(f)
-            except (json.JSONDecodeError, OSError) as err:
-                log.error("Config file %s is malformed: %s (UC 01.04)", self.file_path, err)
-                backup_path = self.file_path.with_suffix(".json.bad")
-                try:
-                    shutil.copyfile(self.file_path, backup_path)
-                    log.warning("Corrupted config backed up to %s", backup_path)
-                except OSError as copy_err:
-                    log.error("Failed to create backup: %s", copy_err)
+            loaded_raw = self._read_json_or_backup()
+            if loaded_raw is None:
                 log.warning("Loading fallback in-memory defaults.")
                 self._data = deepcopy(DEFAULT_CONFIG)
-                return
+            else:
+                self._data = self._validate_and_merge(loaded_raw)
 
-        if loaded_raw is not None and isinstance(loaded_raw, dict):
-            self._validate_and_merge(loaded_raw)
-
-        # Apply command-line overrides (UC 01.06)
+        # Command-line overrides always apply, even after a broken file (UC 01.06)
         args_to_check = cli_args if cli_args is not None else sys.argv[1:]
         self._apply_cli_overrides(args_to_check)
+
+        # Checks that involve more than one setting
+        self._apply_cross_checks()
+
+    def _read_json_or_backup(self):
+        """Read the settings file as a JSON object.
+        On any problem (bad JSON, not an object, unreadable) the file is copied to
+        .json.bad and None is returned (UC 01.04)."""
+        try:
+            with open(self.file_path, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+            if not isinstance(raw, dict):
+                raise ValueError(f"top level must be a JSON object, got {type(raw).__name__}")
+            return raw
+        except (ValueError, OSError) as err:  # JSONDecodeError is a ValueError
+            log.error("Config file %s is malformed: %s (UC 01.04)", self.file_path, err)
+            backup_path = self.file_path.with_suffix(".json.bad")
+            try:
+                shutil.copyfile(self.file_path, backup_path)
+                log.warning("Corrupted config backed up to %s", backup_path)
+            except OSError as copy_err:
+                log.error("Failed to create backup: %s", copy_err)
+            return None
+
+    def _apply_cross_checks(self) -> None:
+        """Checks that involve more than one setting."""
+        volume = self.get("audio.volume")
+        cap = self.get("audio.max_volume_cap")
+        if isinstance(volume, int) and isinstance(cap, int) and volume > cap:
+            log.warning("audio.volume (%d) is above audio.max_volume_cap (%d). Lowering volume. (UC 05.06)",
+                        volume, cap)
+            self._data["audio"]["volume"] = cap
 
     def _save_defaults(self) -> None:
         try:
@@ -173,7 +197,7 @@ class Config:
         except OSError as err:
             log.warning("Cannot write default config to %s (%s). Running on in-memory defaults.", self.file_path, err)
 
-    def _validate_and_merge(self, raw_data: dict) -> None:
+    def _validate_and_merge(self, raw_data: dict) -> dict:
         flat_default = _flatten_dict(DEFAULT_CONFIG)
         flat_incoming = _flatten_dict(raw_data)
         validated_flat = deepcopy(flat_default)
@@ -201,8 +225,8 @@ class Config:
 
             expected_type, min_v, max_v, choices = rule
 
-            # Type check
-            if not isinstance(val, expected_type):
+            # Type check (a bool is not accepted where a number is expected)
+            if not isinstance(val, expected_type) or (isinstance(val, bool) and expected_type is not bool):
                 log.warning("Key '%s' expected type %s, got %s (%r). Using default %r.",
                             key, expected_type.__name__, type(val).__name__, val, def_val)
                 continue
@@ -223,7 +247,7 @@ class Config:
 
             validated_flat[key] = val
 
-        self._data = _unflatten_dict(validated_flat)
+        return _unflatten_dict(validated_flat)
 
     def _apply_cli_overrides(self, args: list) -> None:
         """Parses arguments like --audio.volume=50 or --display.fullscreen=false"""
@@ -248,7 +272,13 @@ class Config:
 
             try:
                 if exp_type is bool:
-                    parsed_val = raw_val.lower() in ("true", "1", "yes")
+                    lowered = raw_val.lower()
+                    if lowered in ("true", "1", "yes", "on"):
+                        parsed_val = True
+                    elif lowered in ("false", "0", "no", "off"):
+                        parsed_val = False
+                    else:
+                        raise ValueError(raw_val)
                 elif exp_type is int:
                     parsed_val = int(raw_val)
                 elif exp_type is float:
@@ -273,6 +303,7 @@ class Config:
 
             log.info("CLI override applied: %s = %r (UC 01.06)", raw_key, parsed_val)
             self.set(raw_key, parsed_val)
+            self._cli_overrides[raw_key] = parsed_val
 
 
 # Global singleton helper

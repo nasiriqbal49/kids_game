@@ -52,6 +52,42 @@ class TestConfigModule(unittest.TestCase):
         bad_backup = self.cfg_file.with_suffix(".json.bad")
         self.assertTrue(bad_backup.exists())
 
+    def test_01_03_bool_is_not_accepted_as_a_number(self):
+        """UC 01.03: true/false in a number setting is rejected and the default is used."""
+        with open(self.cfg_file, "w", encoding="utf-8") as f:
+            json.dump({"audio": {"volume": True}}, f)
+        cfg = Config(file_path=self.cfg_file)
+        self.assertEqual(cfg.get("audio.volume"), 80)
+
+    def test_01_03_volume_cannot_exceed_volume_cap(self):
+        """UC 01.03 / 05.06: volume above max_volume_cap is lowered to the cap."""
+        with open(self.cfg_file, "w", encoding="utf-8") as f:
+            json.dump({"audio": {"volume": 90, "max_volume_cap": 60}}, f)
+        cfg = Config(file_path=self.cfg_file)
+        self.assertEqual(cfg.get("audio.volume"), 60)
+
+    def test_01_04_json_that_is_not_an_object_is_treated_as_malformed(self):
+        """UC 01.04: A valid JSON file that is not an object (a list) is backed up and defaults load."""
+        with open(self.cfg_file, "w", encoding="utf-8") as f:
+            f.write("[1, 2, 3]")
+        cfg = Config(file_path=self.cfg_file)
+        self.assertEqual(cfg.get("audio.volume"), 80)
+        self.assertTrue(self.cfg_file.with_suffix(".json.bad").exists())
+
+    def test_01_06_cli_override_still_applies_after_malformed_file(self):
+        """UC 01.06: Command-line overrides apply even when the file was broken."""
+        with open(self.cfg_file, "w", encoding="utf-8") as f:
+            f.write("{ broken")
+        cfg = Config(file_path=self.cfg_file)
+        cfg.load(cli_args=["--audio.volume=30"])
+        self.assertEqual(cfg.get("audio.volume"), 30)
+
+    def test_01_06_invalid_bool_override_is_rejected(self):
+        """UC 01.06: A typo such as --display.fullscreen=flase is rejected, not read as False."""
+        cfg = Config(file_path=self.cfg_file)
+        cfg.load(cli_args=["--display.fullscreen=flase"])
+        self.assertEqual(cfg.get("display.fullscreen"), True)
+
     def test_01_06_cli_override(self):
         """UC 01.06: Command-line arguments can override config settings."""
         cfg = Config(file_path=self.cfg_file)
