@@ -1,5 +1,6 @@
 import os
 import unittest
+import pygame
 
 # Ensure tests run headless without opening a physical pop-up window
 os.environ["SDL_VIDEODRIVER"] = "dummy"
@@ -84,6 +85,67 @@ class TestDisplayModule(unittest.TestCase):
         self.assertEqual(self.manager.screen.get_width(), 1920)
         self.assertEqual(self.manager.screen.get_height(), 1080)
 
+
+    def test_04_07_font_size_readability_rule(self):
+        """UC 04.07: Minimum font size rules ensure text is readable from 10 feet."""
+        from engine.display import MIN_TITLE_FONT_SIZE, MIN_STAT_FONT_SIZE
+        self.assertGreaterEqual(MIN_TITLE_FONT_SIZE, 36)
+        self.assertGreaterEqual(MIN_STAT_FONT_SIZE, 48)
+
+    def test_04_10_low_fps_automatic_effects_reduction(self):
+        """UC 04.10: FPS dropping under 45 triggers reduced_effects mode."""
+        self.assertFalse(self.manager.reduced_effects)
+        # Simulate severe stutter (e.g. 38 FPS)
+        self.manager.check_fps(38.0)
+        self.assertTrue(self.manager.reduced_effects)
+
+        # Recovery back to 60 FPS
+        self.manager.check_fps(59.0)
+        self.assertFalse(self.manager.reduced_effects)
+
+    def test_04_11_photosensitivity_rate_limiting(self):
+        """UC 04.11: Hit flash is rate-limited to at most 3 per second with soft alpha."""
+        from engine.display import MAX_FLASH_ALPHA
+        # Max alpha must never be full-white strobe (255)
+        self.assertLessEqual(MAX_FLASH_ALPHA, 100)
+
+        t0 = 1000.0
+        # First flash succeeds
+        self.assertTrue(self.manager.trigger_hit_flash(now=t0))
+
+        # Rapid second flash 100 ms later is blocked (violates 3/sec cap)
+        self.assertFalse(self.manager.trigger_hit_flash(now=t0 + 0.10))
+
+        # Flash after 350 ms succeeds (> 333 ms cooldown)
+        self.assertTrue(self.manager.trigger_hit_flash(now=t0 + 0.35))
+
+    def test_04_12_long_profile_name_clipped_with_ellipsis(self):
+        """UC 04.12: Very long profile names are truncated with ellipsis to avoid overflow."""
+        short_name = self.manager.format_display_name("Leo", max_chars=12)
+        self.assertEqual(short_name, "Leo")
+
+        long_name = self.manager.format_display_name("AlexanderTheGreat", max_chars=12)
+        self.assertEqual(long_name, "Alexander...")
+        self.assertLessEqual(len(long_name), 12)
+
+    def test_04_13_focus_loss_dispatches_pause(self):
+            """UC 04.13: Window focus loss emits GAME_PAUSE event."""
+            if not pygame.get_init():
+                pygame.init()
+
+            paused_events = []
+            self.bus.subscribe(EventType.GAME_PAUSE, lambda e: paused_events.append(e.payload.get("reason")))
+
+            class FakeEvent:
+                type = pygame.ACTIVEEVENT
+                gain = 0
+                state = 1
+
+            import unittest.mock as mock
+            with mock.patch("pygame.event.get", return_value=[FakeEvent()]):
+                self.manager.process_window_events()
+
+            self.assertEqual(paused_events, ["focus_loss"])
 
 if __name__ == "__main__":
     unittest.main()

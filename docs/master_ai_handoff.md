@@ -38,18 +38,22 @@
 ## 4. Current Exact State & Next Immediate Step
 
 ### Current State (2026-10-28)
-- **Phase A (Foundation):** 100% COMPLETE (Modules 1, 2, 3 verified).
-- **Gap G3:** Closed (`docs/event_contracts.md` created and committed).
-- **Module 4 (Display and UI):** In progress (Slice 1 complete).
-  - Target display selection & TV fallback implemented (04.01, 04.02, 04.04).
-  - Event-driven HUD state updates implemented (04.05, 04.06).
-- **Total Test Count:** **48 verified passing tests** across 5 test suites.
-- **Git status:** Clean, working tree in sync.
+- **Phase A (Foundation):** 100% COMPLETE (Modules 1, 2, 3 certified with 43 tests).
+- **Gap G3:** Closed (`docs/event_contracts.md` established and approved).
+- **Module 4 (Display and UI):** In progress — **10 of 13 use cases verified with 10 passing tests**.
+  - Display selection & fallback: 04.01, 04.02, 04.04.
+  - Event-driven HUD state: 04.05, 04.06.
+  - Legibility & drawing routines: 04.07.
+  - Safety & performance degradation: 04.10, 04.11, 04.12, 04.13.
+- **Total Test Suite:** **53 verified passing tests** (`python -m unittest discover -s tests -t . -v`).
+- **Git Commit Reference:** See `docs/git_commits.md` for full chronological commit history.
 
 ### Next Immediate Step
-- **Module 4 Slice 2 (Drawing & Safety):**
-  - Implement visual rendering routines in `engine/display.py`: `draw_hud()`, 10-ft readable fonts (04.07), soft photosensitive hit flash (04.11), and focus loss event dispatch (04.13).
-  - Add tests in `tests/test_display.py` for Slice 2 use cases.
+- **Complete Module 4 Remaining Items:**
+  1. `04.03`: HDMI cable pulled or TV disconnected mid-game (detect display disconnect, auto-pause with `reason="display_lost"`, resume with 3-second countdown after reconnected).
+  2. `04.08` & `04.09`: Menu drawing abstractions (Main Menu, Pause Menu, Results overlay with keyboard navigation fallback).
+  3. Wire a live visual test in `main.py` allowing interactive verification of HUD and keyboard controls on the TV at 60 FPS (satisfying the Milestone M1 Display "Done when" criteria).
+- **Then Proceed to Module 5 (Audio Manager):** in `engine/audio.py`.
 
 ### Known open items
 See "Known gaps and open items" in `docs/progress_tracker.md` (G1 to G6).

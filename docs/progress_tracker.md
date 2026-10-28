@@ -14,7 +14,7 @@
 | **1** | **Config and Logging** | **A** | **10** | **DONE (01.10 deferred, P3)** | 2026-10-28 | 9 of 10 verified, 20 tests (15 config, 5 logger). 01.10 privacy filter deferred (P3). |
 | **2** | **Event Bus** | **A** | **11** | **DONE** | 2026-10-28 | 11 of 11 verified, 13 tests (11 catalogue + 2 extra: consecutive-failure reset, concurrent posting). Thread-safe lock added after review. |
 | **3** | **Input Adapter (Keyboard)** | **A** | **9** | **DONE (03.07 partial)** | 2026-10-28 | 9 of 9 have tests, 10 tests. 03.07 covers pause and debug only; quit and recalibrate keys deferred until those features exist. |
-| **4** | **Display and UI** | **B** | **13** | **UP NEXT** | - | Pygame TV output, HUD, 1080p full-screen on extended display. |
+| **4** | **Display and UI** | **B** | **13** | **IN PROGRESS (10 of 13 verified)** | 2026-10-28 | 10 verified tests. Display targeting (04.01, 04.02, 04.04), HUD state & drawing (04.05, 04.06, 04.07), low FPS degradation (04.10), photosensitivity safety (04.11), long name ellipsis (04.12), focus loss pause (04.13). |
 | 5 | Audio Manager | B | 10 | PENDING | - | HDMI TV audio, SFX mixing. |
 | 6 | Game Engine Core | B | 12 | PENDING | - | State machine, fixed-timestep loop. |
 | 7 | Game Mechanics Library | B | 15 | PENDING | - | Spawning, hitboxes, power-ups. |
@@ -42,9 +42,8 @@
 | `tests/test_event_bus.py` | 13 |
 | `tests/test_input_keyboard.py` | 10 |
 | `tests/test_logger.py` | 5 |
-| `tests/test_display.py` | 5 |
-
-| **Total** | **48** |
+| `tests/test_display.py` | 10 |
+| **Total** | **53** |
 
 ---
 
@@ -95,12 +94,17 @@
 ### Module 4: Display and UI (In Progress)
 - **Files Created:** `engine/__init__.py`, `engine/display.py`, `tests/test_display.py`
 - **Use Cases Verified:**
-  - `04.01` (TV detected when second display present): **Pass** (`test_04_01`)
-  - `04.02` (TV not detected, safe fallback to laptop display 0): **Pass** (`test_04_02`)
-  - `04.04` (Initializes at 1080p target resolution): **Pass** (`test_04_04`)
-  - `04.05` (HUD state updates within 1 frame upon events): **Pass** (`test_04_05`)
-  - `04.06` (Low health warning threshold triggers visual warning state): **Pass** (`test_04_06`)
-
+  - `04.01` (TV detected on display index 1 when present): **Pass** (`test_04_01`)
+  - `04.02` (Safe fallback to screen 0 when TV not found): **Pass** (`test_04_02`)
+  - `04.04` (1080p rendering setup): **Pass** (`test_04_04`)
+  - `04.05` (HUD state updates from events within 1 frame): **Pass** (`test_04_05`)
+  - `04.06` (Low health warning visual state triggers at <= 25%): **Pass** (`test_04_06`)
+  - `04.07` (10-ft readability rule: title >= 36px, stat >= 48px): **Pass** (`test_04_07`)
+  - `04.10` (Low FPS auto-degradation under 45 FPS): **Pass** (`test_04_10`)
+  - `04.11` (Photosensitivity protection: max 3 flashes/sec, soft alpha): **Pass** (`test_04_11`)
+  - `04.12` (Long profile name clipped with ellipsis): **Pass** (`test_04_12`)
+  - `04.13` (Window focus loss publishes `GAME_PAUSE`): **Pass** (`test_04_13`)
+  
 ---
 
 ## Known gaps and open items

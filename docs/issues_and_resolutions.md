@@ -99,3 +99,12 @@ This document tracks every error, edge-case hurdle, or design correction encount
 - **Root Cause:** The owner deleted `Kids_Motion_Game_Plan.pdf` on GitHub, creating a commit not present locally.
 - **Resolution:** `git pull --no-rebase --no-edit origin main`, then `git push`. The PDF deletion is intentional; the `.md` plan files are now the source of truth.
 - **Status:** **Resolved**
+
+---
+
+### Issue #012: Missing pygame import and uninitialized video driver in test_display.py
+- **Module:** Module 4 (Display and UI tests, Use Case 04.13)
+- **Symptom:** `NameError: name 'pygame' is not defined` during execution of `test_04_13_focus_loss_dispatches_pause`.
+- **Root Cause:** `import pygame` was omitted from the top-level imports in `tests/test_display.py`. Additionally, because `tearDown()` shuts down pygame video via `close()`, `process_window_events()` returned early on `pygame.get_init() == False`.
+- **Resolution:** Added `import pygame` at the top of `tests/test_display.py` and ensured `pygame.init()` is active in `test_04_13`.
+- **Status:** **Resolved & Verified**

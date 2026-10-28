@@ -24,6 +24,7 @@ Read in exactly this order. Do not skip. Do not skim.
 1. `docs/AI_START_HERE.md` (this file).
 2. `docs/master_ai_handoff.md` - current state and the NEXT immediate step.
 3. `docs/progress_tracker.md` - per-module and per-use-case status. **Treat "Pass" claims as claims, not facts, until verified (see section 6).**
+3A. `docs/git_commits.md` — chronological log of recent commits and exact files touched.
 4. `docs/issues_and_resolutions.md` - past problems; do not repeat them. Append new ones.
 5. `docs/project_directory_structure.md` - where files live and where they will go.
 6. `docs/full_game_plan.md` - requirements, hardware, architecture, all 19 modules with purpose, responsibilities, why-in-this-order, risks, "done when". **Read the section of the module you are about to build in full.**
@@ -106,7 +107,9 @@ Update these three files with **minimal, append-style edits** and tell the owner
 2. `docs/master_ai_handoff.md` - rewrite only section "Current Exact State and Next Immediate Step": what is done (with real test counts), what is half-done, what is next, any open known issues.
 3. `docs/issues_and_resolutions.md` - append any new issue: symptom, root cause, resolution, status.
 
-Also run `python tools/show_tree.py` to refresh `docs/project_directory_structure.md` if files were added.
+Also run:
+- `python tools/show_tree.py --update` to refresh `docs/project_directory_structure.md`.
+- `python tools/update_git_commits.py` to refresh `docs/git_commits.md`.
 
 ## 8. Module build protocol (repeat for each module, in the order of the plan)
 

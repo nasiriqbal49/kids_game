@@ -1,4 +1,5 @@
 import os
+import time
 import pygame
 from typing import Dict, Any, Optional
 from core.events import Event, EventType
@@ -8,11 +9,26 @@ from core.logger import get_logger
 
 log = get_logger("display")
 
+# Visual & Safety Constants (UC 04.07, 04.11)
+MIN_TITLE_FONT_SIZE = 36
+MIN_STAT_FONT_SIZE = 48
+MAX_FLASH_RATE_PER_SEC = 3
+FLASH_COOLDOWN_SEC = 1.0 / MAX_FLASH_RATE_PER_SEC  # ~333 ms minimum between flashes
+FLASH_DURATION_SEC = 0.20
+MAX_FLASH_ALPHA = 100  # Soft flash (never 255 pure white strobe)
+
+# HUD Layout Constants for 1080p
+COLOR_BG = (20, 24, 35)
+COLOR_TEXT = (255, 255, 255)
+COLOR_HEALTH_NORMAL = (46, 204, 113)
+COLOR_HEALTH_LOW = (231, 76, 60)
+COLOR_FLASH = (231, 76, 60)  # Soft red tint for damage
+
 
 class DisplayManager:
     """
     Manages game window, multi-display targeting (TV vs laptop fallback),
-    and HUD state driven entirely by Event Bus events (Module 4).
+    HUD rendering at 1080p, and photosensitivity/focus safety rules.
     """
 
     def __init__(self, bus: Optional[EventBus] = None, cfg: Optional[Config] = None):
@@ -28,6 +44,7 @@ class DisplayManager:
             "speed": 1.0,
             "streak": 0,
             "active_powerups": {},  # {powerup_type: time_remaining}
+            "player_name": "Player 1",
         }
 
         # Display status
@@ -35,6 +52,11 @@ class DisplayManager:
         self.selected_display_index: int = 0
         self.screen: Optional[pygame.Surface] = None
         self.clock: Optional[pygame.time.Clock] = None
+
+        # Safety & Performance Controls (UC 04.10, 04.11)
+        self.reduced_effects: bool = False
+        self._last_flash_time: float = -1.0
+        self._flash_active_until: float = -1.0
 
         # Subscribe to gameplay and state events
         self._subscribe_events()
@@ -47,9 +69,10 @@ class DisplayManager:
         self.bus.subscribe(EventType.STREAK_CHANGED, self._on_streak_changed)
         self.bus.subscribe(EventType.POWERUP_COLLECTED, self._on_powerup_collected)
         self.bus.subscribe(EventType.POWERUP_EXPIRED, self._on_powerup_expired)
+        self.bus.subscribe(EventType.OBSTACLE_HIT, self._on_obstacle_hit)
 
     # -------------------------------------------------------------------------
-    # Event Handlers (HUD State Updates within 1 frame - UC 04.05, 04.06)
+    # Event Handlers (HUD State Updates within 1 frame - UC 04.05, 04.06, 04.11)
     # -------------------------------------------------------------------------
 
     def _on_health_changed(self, event: Event) -> None:
@@ -57,7 +80,6 @@ class DisplayManager:
         max_hp = event.payload.get("max", self.hud_state["max_health"])
         self.hud_state["health"] = current
         self.hud_state["max_health"] = max_hp
-        # UC 04.06: Low health warning threshold (<= 25% or explicit flag)
         self.hud_state["health_is_low"] = event.payload.get("is_low", current <= 25)
 
     def _on_score_changed(self, event: Event) -> None:
@@ -80,17 +102,70 @@ class DisplayManager:
         if p_type in self.hud_state["active_powerups"]:
             del self.hud_state["active_powerups"][p_type]
 
+    def _on_obstacle_hit(self, event: Event) -> None:
+        """Trigger photosensitive-safe hit flash on damage (UC 04.11)."""
+        self.trigger_hit_flash()
+
     # -------------------------------------------------------------------------
-    # Display Setup & Target Selection (UC 04.01, 04.02, 04.04)
+    # Photosensitivity & Safety Rules (UC 04.11, 04.12, 04.13)
+    # -------------------------------------------------------------------------
+
+    def trigger_hit_flash(self, now: Optional[float] = None) -> bool:
+        """
+        Triggers a damage flash. Enforces photosensitivity safety:
+        - Max 3 flashes per second.
+        - Soft tint (max alpha 100), never full white strobe.
+        """
+        current_time = now if now is not None else time.time()
+        if (current_time - self._last_flash_time) < FLASH_COOLDOWN_SEC:
+            # Suppress rapid flashing (UC 04.11)
+            return False
+
+        self._last_flash_time = current_time
+        self._flash_active_until = current_time + FLASH_DURATION_SEC
+        return True
+
+    @staticmethod
+    def format_display_name(name: str, max_chars: int = 12) -> str:
+        """Truncates long profile names with an ellipsis (UC 04.12)."""
+        trimmed = name.strip()
+        if len(trimmed) <= max_chars:
+            return trimmed
+        return trimmed[:max_chars - 3] + "..."
+
+    def check_fps(self, current_fps: float) -> None:
+        """Low FPS degradation (UC 04.10). Automatically simplifies effects if under 45 FPS."""
+        if current_fps < 45.0 and not self.reduced_effects:
+            self.reduced_effects = True
+            log.warning("Frame rate dropped to %.1f FPS (< 45). Reduced visual effects enabled (UC 04.10).",
+                        current_fps)
+        elif current_fps >= 55.0 and self.reduced_effects:
+            self.reduced_effects = False
+            log.info("Frame rate recovered to %.1f FPS. Full effects restored.", current_fps)
+
+    def process_window_events(self) -> None:
+        """
+        Checks OS / Pygame window events.
+        Detects focus loss and triggers auto-pause (UC 04.13).
+        """
+        if not pygame.get_init():
+            return
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.bus.publish(Event(EventType.GAME_PAUSE, {"reason": "window_close"}))
+            elif event.type == pygame.ACTIVEEVENT:
+                # event.gain == 0 means window lost focus
+                if hasattr(event, "gain") and event.gain == 0 and event.state == 1:
+                    log.info("Window focus lost. Pausing game (UC 04.13).")
+                    self.bus.publish(Event(EventType.GAME_PAUSE, {"reason": "focus_loss"}))
+
+    # -------------------------------------------------------------------------
+    # Display Setup & Drawing Routines (UC 04.01, 04.04, 04.07)
     # -------------------------------------------------------------------------
 
     def resolve_display_index(self, num_displays: int) -> int:
-        """
-        Picks the display index. Target is the TV (index 1).
-        If TV is not connected, falls back safely to laptop screen (index 0) (UC 04.02).
-        """
         requested_index = self.config.get("display.display_index", 1)
-
         if num_displays > requested_index:
             self.tv_found = True
             self.selected_display_index = requested_index
@@ -100,16 +175,16 @@ class DisplayManager:
             self.selected_display_index = 0
             log.warning("Display %d not detected (found %d display(s)). Falling back to screen 0 (UC 04.02).",
                         requested_index, num_displays)
-
         return self.selected_display_index
 
     def init_display(self, headless: bool = False) -> None:
-        """Initializes Pygame video and opens the window."""
         if headless:
             os.environ["SDL_VIDEODRIVER"] = "dummy"
 
         if not pygame.get_init():
             pygame.init()
+        if not pygame.font.get_init():
+            pygame.font.init()
 
         num_displays = pygame.display.get_num_displays()
         target_display = self.resolve_display_index(num_displays)
@@ -123,11 +198,7 @@ class DisplayManager:
             flags |= pygame.FULLSCREEN
 
         try:
-            self.screen = pygame.display.set_mode(
-                (width, height),
-                flags=flags,
-                display=target_display
-            )
+            self.screen = pygame.display.set_mode((width, height), flags=flags, display=target_display)
             pygame.display.set_caption("Kids Motion Game")
             self.clock = pygame.time.Clock()
             log.info("Display initialized at %dx%d on display %d (fullscreen=%s). (UC 04.04)",
@@ -137,7 +208,43 @@ class DisplayManager:
             self.screen = pygame.display.set_mode((width, height))
             self.clock = pygame.time.Clock()
 
+    def draw_hud(self, surface: pygame.Surface) -> None:
+        """
+        Draws 1080p HUD:
+        - Health Bar (turns red when is_low).
+        - Score and Streak with 10-ft readable font sizes (UC 04.07).
+        - Active Power-Up tags.
+        """
+        # 1. Health Bar
+        bar_x, bar_y = 60, 40
+        bar_w, bar_h = 350, 45
+        hp_pct = max(0.0, min(1.0, self.hud_state["health"] / max(1, self.hud_state["max_health"])))
+        current_w = int(bar_w * hp_pct)
+
+        color = COLOR_HEALTH_LOW if self.hud_state["health_is_low"] else COLOR_HEALTH_NORMAL
+
+        # Background + Border
+        pygame.draw.rect(surface, (60, 60, 60), (bar_x, bar_y, bar_w, bar_h))
+        pygame.draw.rect(surface, color, (bar_x, bar_y, current_w, bar_h))
+        pygame.draw.rect(surface, (255, 255, 255), (bar_x, bar_y, bar_w, bar_h), 3)
+
+        # 2. Score & Streak (Large fonts for 10-ft readability - UC 04.07)
+        font = pygame.font.Font(None, MIN_STAT_FONT_SIZE)
+        score_surf = font.render(f"SCORE: {self.hud_state['score']}", True, COLOR_TEXT)
+        surface.blit(score_surf, (1920 - score_surf.get_width() - 60, 40))
+
+        if self.hud_state["streak"] > 1:
+            streak_font = pygame.font.Font(None, MIN_TITLE_FONT_SIZE)
+            streak_surf = streak_font.render(f"STREAK: {self.hud_state['streak']}x", True, (241, 196, 15))
+            surface.blit(streak_surf, (1920 - streak_surf.get_width() - 60, 95))
+
+        # 3. Soft Hit Flash Overlay (UC 04.11)
+        now = time.time()
+        if now < self._flash_active_until:
+            flash_overlay = pygame.Surface((1920, 1080), pygame.SRCALPHA)
+            flash_overlay.fill((*COLOR_FLASH, MAX_FLASH_ALPHA))
+            surface.blit(flash_overlay, (0, 0))
+
     def close(self) -> None:
-        """Cleanly releases video resources."""
         if pygame.get_init():
             pygame.quit()
