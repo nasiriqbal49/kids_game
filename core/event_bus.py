@@ -125,8 +125,8 @@ class EventBus:
                 if failures >= self.max_subscriber_errors:
                     log.warning("Subscriber '%s' disabled after %d consecutive failures.",
                                 sub_name, self.max_subscriber_errors)
-                else:
-                    self._failure_counts.pop(callback, None)
+            else:
+                self._failure_counts.pop(callback, None)
 
     # -------------------------------------------------------------------------
     # Cross-Thread Asynchronous Queue (UC 02.04, 02.07)
