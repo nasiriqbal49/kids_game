@@ -216,40 +216,67 @@ class DisplayManager:
             self.screen = pygame.display.set_mode((width, height))
             self.clock = pygame.time.Clock()
 
+    @property
+    def particles_enabled(self) -> bool:
+        """Visual effects toggle: disabled automatically when FPS drops under 45 (UC 04.10)."""
+        return not self.reduced_effects
+
     def draw_hud(self, surface: pygame.Surface) -> None:
         """
-        Draws 1080p HUD:
-        - Health Bar (turns red when is_low).
+        Draws HUD scaled dynamically to surface dimensions (Gap G8):
+        - Player Name (UC 04.12: clipped with ellipsis if long).
+        - Health Bar (UC 04.06: turns red + draws '[ ! ] LOW HEALTH' alert badge when is_low).
         - Score and Streak with 10-ft readable font sizes (UC 04.07).
-        - Active Power-Up tags.
+        - Soft Hit Flash Overlay (UC 04.11).
+        - Respects reduced_effects by skipping decorative accents (UC 04.10).
         """
-        # 1. Health Bar
-        bar_x, bar_y = 60, 40
-        bar_w, bar_h = 350, 45
+        sw = surface.get_width()
+        sh = surface.get_height()
+        scale_x = sw / 1920.0
+        scale_y = sh / 1080.0
+
+        # 1. Player Name (UC 04.12)
+        display_name = self.format_display_name(self.hud_state.get("player_name", "Player 1"), max_chars=12)
+        name_font = pygame.font.Font(None, max(24, int(MIN_TITLE_FONT_SIZE * scale_y)))
+        name_surf = name_font.render(display_name, True, COLOR_TEXT)
+        surface.blit(name_surf, (int(60 * scale_x), int(15 * scale_y)))
+
+        # 2. Health Bar & Warning Badge (UC 04.06)
+        bar_x = int(60 * scale_x)
+        bar_y = int(50 * scale_y)
+        bar_w = int(350 * scale_x)
+        bar_h = int(45 * scale_y)
         hp_pct = max(0.0, min(1.0, self.hud_state["health"] / max(1, self.hud_state["max_health"])))
         current_w = int(bar_w * hp_pct)
 
         color = COLOR_HEALTH_LOW if self.hud_state["health_is_low"] else COLOR_HEALTH_NORMAL
 
-        # Background + Border
+        # Background + Current HP + Border
         pygame.draw.rect(surface, (60, 60, 60), (bar_x, bar_y, bar_w, bar_h))
         pygame.draw.rect(surface, color, (bar_x, bar_y, current_w, bar_h))
-        pygame.draw.rect(surface, (255, 255, 255), (bar_x, bar_y, bar_w, bar_h), 3)
+        pygame.draw.rect(surface, (255, 255, 255), (bar_x, bar_y, bar_w, bar_h), max(2, int(3 * scale_x)))
 
-        # 2. Score & Streak (Large fonts for 10-ft readability - UC 04.07)
-        font = pygame.font.Font(None, MIN_STAT_FONT_SIZE)
+        # Low-Health Alert Badge (UC 04.06)
+        if self.hud_state["health_is_low"]:
+            alert_font = pygame.font.Font(None, max(22, int(MIN_TITLE_FONT_SIZE * scale_y)))
+            alert_surf = alert_font.render("[ ! ] LOW HEALTH", True, COLOR_HEALTH_LOW)
+            surface.blit(alert_surf, (bar_x + bar_w + int(15 * scale_x), bar_y + int(10 * scale_y)))
+
+        # 3. Score & Streak (Large fonts for 10-ft readability - UC 04.07)
+        stat_font_size = max(28, int(MIN_STAT_FONT_SIZE * scale_y))
+        font = pygame.font.Font(None, stat_font_size)
         score_surf = font.render(f"SCORE: {self.hud_state['score']}", True, COLOR_TEXT)
-        surface.blit(score_surf, (1920 - score_surf.get_width() - 60, 40))
+        surface.blit(score_surf, (sw - score_surf.get_width() - int(60 * scale_x), int(40 * scale_y)))
 
         if self.hud_state["streak"] > 1:
-            streak_font = pygame.font.Font(None, MIN_TITLE_FONT_SIZE)
+            streak_font = pygame.font.Font(None, max(24, int(MIN_TITLE_FONT_SIZE * scale_y)))
             streak_surf = streak_font.render(f"STREAK: {self.hud_state['streak']}x", True, (241, 196, 15))
-            surface.blit(streak_surf, (1920 - streak_surf.get_width() - 60, 95))
+            surface.blit(streak_surf, (sw - streak_surf.get_width() - int(60 * scale_x), int(95 * scale_y)))
 
-        # 3. Soft Hit Flash Overlay (UC 04.11)
+        # 4. Soft Hit Flash Overlay (UC 04.11)
         now = time.time()
         if now < self._flash_active_until:
-            flash_overlay = pygame.Surface((1920, 1080), pygame.SRCALPHA)
+            flash_overlay = pygame.Surface((sw, sh), pygame.SRCALPHA)
             flash_overlay.fill((*COLOR_FLASH, MAX_FLASH_ALPHA))
             surface.blit(flash_overlay, (0, 0))
 

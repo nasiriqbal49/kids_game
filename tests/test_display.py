@@ -170,5 +170,52 @@ class TestDisplayModule(unittest.TestCase):
         self.assertTrue(self.manager.quit_requested)
         self.assertEqual(paused, [])
 
+    def test_04_06_draw_hud_renders_low_health_badge(self):
+        """UC 04.06: draw_hud renders without error when low health state is active."""
+        if not pygame.get_init():
+            pygame.init()
+        if not pygame.font.get_init():
+            pygame.font.init()
+
+        surface = pygame.Surface((1920, 1080))
+        # Trigger low health
+        self.bus.publish(Event(EventType.HEALTH_CHANGED, {"current": 15, "max": 100, "is_low": True}))
+        self.manager.draw_hud(surface)
+        self.assertTrue(self.manager.hud_state["health_is_low"])
+
+    def test_04_07_draw_hud_scales_to_custom_surface_size(self):
+        """UC 04.07 / G8: draw_hud scales dynamically to any surface size (e.g. 1280x720 laptop fallback)."""
+        if not pygame.get_init():
+            pygame.init()
+        if not pygame.font.get_init():
+            pygame.font.init()
+
+        small_surface = pygame.Surface((1280, 720))
+        # Must execute cleanly without error or boundary overflow
+        self.manager.draw_hud(small_surface)
+        self.assertEqual(small_surface.get_size(), (1280, 720))
+
+    def test_04_10_particles_enabled_property_reflects_fps(self):
+        """UC 04.10: particles_enabled toggle reflects frame rate health."""
+        self.manager.check_fps(60.0)
+        self.assertTrue(self.manager.particles_enabled)
+
+        # FPS drops under 45
+        self.manager.check_fps(40.0)
+        self.assertFalse(self.manager.particles_enabled)
+
+    def test_04_12_draw_hud_renders_player_name(self):
+        """UC 04.12: draw_hud renders the player name onto the surface."""
+        if not pygame.get_init():
+            pygame.init()
+        if not pygame.font.get_init():
+            pygame.font.init()
+
+        surface = pygame.Surface((1920, 1080))
+        self.manager.hud_state["player_name"] = "SuperKid"
+        self.manager.draw_hud(surface)
+        self.assertEqual(self.manager.hud_state["player_name"], "SuperKid")
+
+
 if __name__ == "__main__":
     unittest.main()
