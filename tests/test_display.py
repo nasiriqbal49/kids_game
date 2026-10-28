@@ -279,6 +279,71 @@ class TestDisplayModule(unittest.TestCase):
         self.manager.draw_hud(surface)
         self.assertTrue(self.manager.reconnect_countdown_active)
 
+    def test_04_09_keyboard_menu_navigation(self):
+        """UC 04.09: Keyboard navigation moves through menu items and selects cleanly."""
+        self.manager.set_menu("TEST MENU", ["Option A", "Option B", "Option C"])
+        self.assertEqual(self.manager.selected_item_index, 0)
+
+        # Down arrow / Next
+        self.manager.menu_nav_next()
+        self.assertEqual(self.manager.selected_item_index, 1)
+
+        # Wrap around with Next
+        self.manager.menu_nav_next()
+        self.manager.menu_nav_next()
+        self.assertEqual(self.manager.selected_item_index, 0)
+
+        # Up arrow / Prev
+        self.manager.menu_nav_prev()
+        self.assertEqual(self.manager.selected_item_index, 2)
+
+        # Select
+        selected = self.manager.menu_select_instant()
+        self.assertEqual(selected, "Option C")
+
+    def test_04_08_hold_to_select_requires_full_second(self):
+        """UC 04.08: Body control selection requires at least 1.0 second hold to confirm."""
+        self.manager.set_menu("PROFILES", ["Child 1", "Child 2"])
+
+        # Holding for 0.5s does not trigger selection
+        confirmed = self.manager.update_hold_select(is_holding=True, dt=0.5)
+        self.assertFalse(confirmed)
+        self.assertAlmostEqual(self.manager.hold_select_timer, 0.5)
+
+        # Releasing cancels timer
+        self.manager.update_hold_select(is_holding=False, dt=0.1)
+        self.assertEqual(self.manager.hold_select_timer, 0.0)
+
+        # Holding continuously for 1.0s confirms
+        self.manager.update_hold_select(is_holding=True, dt=0.6)
+        confirmed = self.manager.update_hold_select(is_holding=True, dt=0.5)
+        self.assertTrue(confirmed)
+
+    def test_04_08_draw_menu_renders_without_error(self):
+        """UC 04.08 / 04.09: draw_menu renders title, options, and hold indicator cleanly."""
+        if not pygame.get_init():
+            pygame.init()
+        if not pygame.font.get_init():
+            pygame.font.init()
+
+        surface = pygame.Surface((1920, 1080))
+        self.manager.set_menu("MAIN MENU", ["Play", "Settings"])
+        self.manager.hold_select_timer = 0.5  # Mid-hold progress
+        self.manager.draw_menu(surface)
+        self.assertEqual(len(self.manager.menu_items), 2)
+
+    def test_04_09_state_changed_event_configures_menus(self):
+        """UC 04.09: STATE_CHANGED events automatically switch active menu layouts."""
+        self.bus.publish(Event(EventType.STATE_CHANGED, {"old_state": "MENU", "new_state": "PAUSED"}))
+        self.assertEqual(self.manager.current_state, "PAUSED")
+        self.assertEqual(self.manager.menu_title, "GAME PAUSED")
+        self.assertIn("Resume", self.manager.menu_items)
+
+        # Switching to PLAYING clears the menu overlay
+        self.bus.publish(Event(EventType.STATE_CHANGED, {"old_state": "PAUSED", "new_state": "PLAYING"}))
+        self.assertEqual(self.manager.current_state, "PLAYING")
+        self.assertIsNone(self.manager.menu_title)
+
 
 if __name__ == "__main__":
     unittest.main()

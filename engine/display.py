@@ -65,6 +65,14 @@ class DisplayManager:
         self._countdown_start_time: float = 0.0
         self._last_countdown_count: int = -1
 
+        # Menu state & navigation (UC 04.08, 04.09)
+        self.menu_title: Optional[str] = None
+        self.menu_items: list = []
+        self.selected_item_index: int = 0
+        self.hold_select_duration: float = 1.0  # 1.0s deliberate hold (UC 04.08)
+        self.hold_select_timer: float = 0.0
+        self.current_state: str = "MENU"
+
         # Subscribe to gameplay and state events
         self._subscribe_events()
 
@@ -77,6 +85,7 @@ class DisplayManager:
         self.bus.subscribe(EventType.POWERUP_COLLECTED, self._on_powerup_collected)
         self.bus.subscribe(EventType.POWERUP_EXPIRED, self._on_powerup_expired)
         self.bus.subscribe(EventType.OBSTACLE_HIT, self._on_obstacle_hit)
+        self.bus.subscribe(EventType.STATE_CHANGED, self._on_state_changed)
 
     # -------------------------------------------------------------------------
     # Event Handlers (HUD State Updates within 1 frame - UC 04.05, 04.06, 04.11)
@@ -235,9 +244,126 @@ class DisplayManager:
                 remaining.append(event)
         return remaining
 
+
+# -------------------------------------------------------------------------
+    # Menu Management & Navigation (UC 04.08, 04.09)
+    # -------------------------------------------------------------------------
+
+    def _on_state_changed(self, event: Event) -> None:
+        """Updates internal state and configures default menus on state transitions."""
+        new_state = event.payload.get("new_state", "MENU")
+        self.current_state = new_state
+        if new_state == "MENU":
+            self.set_menu("KIDS MOTION GAME", ["Start Game", "Profiles", "Settings", "Quit"])
+        elif new_state == "PAUSED":
+            self.set_menu("GAME PAUSED", ["Resume", "Restart", "Quit to Menu"])
+        elif new_state == "GAME_OVER":
+            self.set_menu("GAME OVER", ["Play Again", "Main Menu"])
+        elif new_state == "PLAYING":
+            self.clear_menu()
+
+    def set_menu(self, title: str, items: list) -> None:
+        """Sets the active menu title and selectable options."""
+        self.menu_title = title
+        self.menu_items = items
+        self.selected_item_index = 0
+        self.hold_select_timer = 0.0
+
+    def clear_menu(self) -> None:
+        """Clears the active menu overlay."""
+        self.menu_title = None
+        self.menu_items = []
+        self.selected_item_index = 0
+        self.hold_select_timer = 0.0
+
+    def menu_nav_next(self) -> int:
+        """Navigates to next menu item (Down arrow / Lean Right) (UC 04.08, 04.09)."""
+        if self.menu_items:
+            self.selected_item_index = (self.selected_item_index + 1) % len(self.menu_items)
+            self.hold_select_timer = 0.0
+        return self.selected_item_index
+
+    def menu_nav_prev(self) -> int:
+        """Navigates to previous menu item (Up arrow / Lean Left) (UC 04.08, 04.09)."""
+        if self.menu_items:
+            self.selected_item_index = (self.selected_item_index - 1) % len(self.menu_items)
+            self.hold_select_timer = 0.0
+        return self.selected_item_index
+
+    def menu_select_instant(self) -> Optional[str]:
+        """Instant selection by keyboard (Enter/Space) or parent controls (UC 04.09)."""
+        if self.menu_items and 0 <= self.selected_item_index < len(self.menu_items):
+            return self.menu_items[self.selected_item_index]
+        return None
+
+    def update_hold_select(self, is_holding: bool, dt: float) -> bool:
+        """
+        Advances hold-to-select timer for body controls (UC 04.08).
+        Requires 1.0s of continuous hold to confirm, preventing accidental triggers.
+        Returns True when confirmed.
+        """
+        if not is_holding:
+            self.hold_select_timer = 0.0
+            return False
+
+        self.hold_select_timer += dt
+        if self.hold_select_timer >= self.hold_select_duration:
+            self.hold_select_timer = 0.0
+            return True
+        return False
+
+    def draw_menu(self, surface: pygame.Surface) -> None:
+        """Draws high-contrast centered menu overlay readable from 10 ft (UC 04.08, 04.09)."""
+        if not self.menu_title or not self.menu_items:
+            return
+
+        sw = surface.get_width()
+        sh = surface.get_height()
+        scale_y = sh / 1080.0
+
+        # Semi-transparent dark backdrop
+        backdrop = pygame.Surface((sw, sh), pygame.SRCALPHA)
+        backdrop.fill((10, 15, 25, 215))
+        surface.blit(backdrop, (0, 0))
+
+        # Title
+        title_font = pygame.font.Font(None, max(48, int(72 * scale_y)))
+        title_surf = title_font.render(self.menu_title, True, (255, 255, 255))
+        surface.blit(title_surf, (sw // 2 - title_surf.get_width() // 2, int(180 * scale_y)))
+
+        # Menu Items
+        item_font = pygame.font.Font(None, max(36, int(52 * scale_y)))
+        start_y = int(320 * scale_y)
+        spacing = int(80 * scale_y)
+
+        for i, item_text in enumerate(self.menu_items):
+            is_selected = (i == self.selected_item_index)
+            color = (241, 196, 15) if is_selected else (200, 200, 200)
+
+            prefix = "> " if is_selected else "  "
+            item_surf = item_font.render(f"{prefix}{item_text}", True, color)
+            x_pos = sw // 2 - item_surf.get_width() // 2
+            y_pos = start_y + i * spacing
+
+            if is_selected:
+                # Highlight box
+                box_w = item_surf.get_width() + 60
+                box_h = item_surf.get_height() + 16
+                pygame.draw.rect(surface, (241, 196, 15), (sw // 2 - box_w // 2, y_pos - 8, box_w, box_h), 3)
+
+                # Hold-to-select progress bar (UC 04.08)
+                if self.hold_select_timer > 0.0:
+                    pct = min(1.0, self.hold_select_timer / self.hold_select_duration)
+                    prog_w = int(box_w * pct)
+                    pygame.draw.rect(surface, (46, 204, 113), (sw // 2 - box_w // 2, y_pos + box_h - 10, prog_w, 6))
+
+            surface.blit(item_surf, (x_pos, y_pos))
+
     # -------------------------------------------------------------------------
     # Display Setup & Drawing Routines (UC 04.01, 04.04, 04.07)
     # -------------------------------------------------------------------------
+
+
 
     def resolve_display_index(self, num_displays: int) -> int:
         requested_index = self.config.get("display.display_index", 1)
