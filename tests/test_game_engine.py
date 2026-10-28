@@ -83,6 +83,67 @@ class TestGameEngine(unittest.TestCase):
         self.assertEqual(self.engine.streak, 0)
         self.assertEqual(self.engine.health, 100)
 
+    def test_06_04_out_of_zone_grace_period_and_autopause(self):
+        """UC 06.04: Stepping out of zone auto-pauses after 1.0s grace period."""
+        paused_reasons = []
+        self.bus.subscribe(EventType.GAME_PAUSE, lambda e: paused_reasons.append(e.payload.get("reason")))
+
+        self.engine.transition_to(GameState.PLAYING)
+
+        # Player steps out of zone
+        self.bus.publish(Event(EventType.PLAYER_OUT_OF_ZONE))
+        self.assertFalse(self.engine.player_in_zone)
+
+        # 0.5s elapsed (within grace period) -> no pause
+        self.engine.tick(0.5)
+        self.assertEqual(len(paused_reasons), 0)
+
+        # Another 0.6s elapsed (total 1.1s > 1.0s grace) -> triggers auto-pause
+        self.engine.tick(0.6)
+        self.assertIn("out_of_zone", paused_reasons)
+
+    def test_06_06_difficulty_speed_ramps_smoothly_to_cap(self):
+        """UC 06.06: Speed rises smoothly with distance/time up to speed_cap."""
+        self.engine.transition_to(GameState.PLAYING)
+        self.engine.speed_ramp_rate = 0.1  # Fast ramp for testing
+        self.engine.speed_cap = 1.5
+
+        # Advance 2 seconds
+        for _ in range(120):
+            self.engine.tick(1.0 / 60.0)
+
+        self.assertGreater(self.engine.current_speed, 1.1)
+
+        # Advance another 10 seconds -> must be capped at 1.5
+        for _ in range(600):
+            self.engine.tick(1.0 / 60.0)
+
+        self.assertEqual(self.engine.current_speed, 1.5)
+
+    def test_06_07_frame_spike_accumulator_clamp(self):
+        """UC 06.07: Huge frame time spikes are clamped to max_catch_up_steps."""
+        self.engine.transition_to(GameState.PLAYING)
+
+        # Simulate a 1.0 second lag spike (60 missed frames)
+        steps_executed = self.engine.tick(1.0)
+
+        # Must not execute 60 steps (prevents death spiral), clamped to max 5
+        self.assertEqual(steps_executed, self.engine.max_catch_up_steps)
+        self.assertEqual(self.engine._accumulator, 0.0)
+
+    def test_06_09_idle_timeout_returns_to_menu(self):
+        """UC 06.09: Idle paused game returns to MENU after idle_timeout_sec."""
+        self.engine.transition_to(GameState.PLAYING)
+        self.engine.transition_to(GameState.PAUSED)
+        self.engine.idle_timeout_sec = 10.0  # Set short for test
+
+        # 5 seconds elapsed -> still paused
+        self.engine.tick(5.0)
+        self.assertEqual(self.engine.state, GameState.PAUSED)
+
+        # Total 11 seconds elapsed -> returns to MENU
+        self.engine.tick(6.0)
+        self.assertEqual(self.engine.state, GameState.MENU)
 
 if __name__ == "__main__":
     unittest.main()

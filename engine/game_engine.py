@@ -52,6 +52,25 @@ class GameEngine:
         self.speed: float = 1.0
         self.streak: int = 0
         self.run_duration_sec: float = 0.0
+        # Fixed-timestep loop & lag spike protection (UC 06.07)
+        self.fixed_dt: float = 1.0 / 60.0  # 60 Hz fixed physics tick
+        self._accumulator: float = 0.0
+        self.max_catch_up_steps: int = 5
+
+        # Difficulty curve (UC 06.06)
+        self.base_speed: float = 1.0
+        self.speed_cap: float = 2.0
+        self.speed_ramp_rate: float = 0.02  # Speed increase per second
+        self.current_speed: float = 1.0
+
+        # Safety & Zone Tracking (UC 06.04)
+        self.player_in_zone: bool = True
+        self.zone_grace_period_sec: float = 1.0
+        self._out_of_zone_timer: float = 0.0
+
+        # Idle Timeout (UC 06.09)
+        self.idle_timeout_sec: float = float(self.config.get("gameplay.idle_timeout_sec", 300))
+        self._idle_timer: float = 0.0
 
         # Subscribe to lifecycle and input events
         self._subscribe_events()
@@ -61,6 +80,8 @@ class GameEngine:
         self.bus.subscribe(EventType.GAME_PAUSE, self._on_game_pause)
         self.bus.subscribe(EventType.GAME_RESUME, self._on_game_resume)
         self.bus.subscribe(EventType.HEALTH_CHANGED, self._on_health_changed)
+        self.bus.subscribe(EventType.PLAYER_IN_ZONE, self._on_player_in_zone)
+        self.bus.subscribe(EventType.PLAYER_OUT_OF_ZONE, self._on_player_out_of_zone)
 
     # -------------------------------------------------------------------------
     # State Machine (UC 06.01, 06.02)
@@ -149,3 +170,81 @@ class GameEngine:
         self.streak = 0
         self.run_duration_sec = 0.0
         log.info("Game engine reset to initial state (UC 06.11).")
+
+        # -------------------------------------------------------------------------
+    # Zone Safety & Auto-Pause (UC 06.04)
+    # -------------------------------------------------------------------------
+
+    def _on_player_in_zone(self, event: Event) -> None:
+        """Player returned to play zone (UC 06.04)."""
+        self.player_in_zone = True
+        self._out_of_zone_timer = 0.0
+        if self.state == GameState.PAUSED:
+            log.info("Player returned to zone. Resuming game with countdown (UC 06.04).")
+            self.transition_to(GameState.PLAYING)
+
+    def _on_player_out_of_zone(self, event: Event) -> None:
+        """Player stepped off floor tiles (UC 06.04)."""
+        self.player_in_zone = False
+
+    # -------------------------------------------------------------------------
+    # Fixed-Timestep Loop & Timing Updates (UC 06.06, 06.07, 06.09)
+    # -------------------------------------------------------------------------
+
+    def tick(self, frame_time_sec: float) -> int:
+        """
+        Fixed-timestep accumulator loop (UC 06.07).
+        Guarantees physics and timers advance consistently regardless of frame rate.
+        Caps catch-up steps at max_catch_up_steps to prevent lag death spiral.
+        Returns the number of fixed steps executed.
+        """
+        # Idle timeout tracking (UC 06.09)
+        if self.state in (GameState.PAUSED, GameState.MENU):
+            self._idle_timer += frame_time_sec
+            if self._idle_timer >= self.idle_timeout_sec and self.state != GameState.MENU:
+                log.info("Idle timeout (%.0fs) reached. Returning to MENU (UC 06.09).", self.idle_timeout_sec)
+                self.transition_to(GameState.MENU)
+                self._idle_timer = 0.0
+        else:
+            self._idle_timer = 0.0
+
+        # Zone grace period countdown during active play (UC 06.04)
+        if self.state == GameState.PLAYING and not self.player_in_zone:
+            self._out_of_zone_timer += frame_time_sec
+            if self._out_of_zone_timer >= self.zone_grace_period_sec:
+                log.warning("Player out of zone past grace period. Auto-pausing (UC 06.04).")
+                self.bus.publish(Event(EventType.GAME_PAUSE, {"reason": "out_of_zone"}))
+                return 0
+
+        if self.state != GameState.PLAYING:
+            return 0
+
+        # Accumulate elapsed time for fixed steps
+        self._accumulator += frame_time_sec
+        steps = 0
+
+        while self._accumulator >= self.fixed_dt and steps < self.max_catch_up_steps:
+            self._update_fixed_step(self.fixed_dt)
+            self._accumulator -= self.fixed_dt
+            steps += 1
+
+        # Discard excess lag spike accumulation (UC 06.07)
+        if self._accumulator > self.fixed_dt:
+            self._accumulator = 0.0
+
+        return steps
+
+    def _update_fixed_step(self, dt: float) -> None:
+        """Single fixed-timestep physics and difficulty update."""
+        self.run_duration_sec += dt
+
+        # Smooth progressive difficulty speed ramping (UC 06.06)
+        old_speed = self.current_speed
+        self.current_speed = min(self.speed_cap, self.base_speed + (self.run_duration_sec * self.speed_ramp_rate))
+
+        # Broadcast speed updates when speed changes measurably
+        if abs(self.current_speed - old_speed) >= 0.05:
+            self.bus.publish(Event(EventType.SPEED_CHANGED, {
+                "current_speed": round(self.current_speed, 2),
+                "is_capped": self.current_speed >= self.speed_cap
+            }))
