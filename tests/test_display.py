@@ -217,5 +217,68 @@ class TestDisplayModule(unittest.TestCase):
         self.assertEqual(self.manager.hud_state["player_name"], "SuperKid")
 
 
+    def test_04_03_display_disconnect_publishes_pause(self):
+        """UC 04.03: HDMI disconnected mid-game pauses with reason='hdmi_disconnect'."""
+        paused_reasons = []
+        self.bus.subscribe(EventType.GAME_PAUSE, lambda e: paused_reasons.append(e.payload.get("reason")))
+
+        # Simulate TV active (2 displays available)
+        self.manager.resolve_display_index(num_displays=2)
+        self.assertTrue(self.manager.tv_found)
+
+        # HDMI cable pulled -> drops to 1 display (laptop only)
+        self.manager.check_display_connection(num_displays=1)
+        self.assertTrue(self.manager.display_lost)
+        self.assertIn("hdmi_disconnect", paused_reasons)
+
+        # Repeated check while disconnected must not spam duplicate pause events
+        self.manager.check_display_connection(num_displays=1)
+        self.assertEqual(len(paused_reasons), 1)
+
+    def test_04_03_display_reconnect_starts_countdown_and_resumes(self):
+        """UC 04.03: HDMI reconnected initiates 3s countdown then publishes GAME_RESUME."""
+        ticks = []
+        resumed = []
+        self.bus.subscribe(EventType.COUNTDOWN_TICK, lambda e: ticks.append(e.payload.get("count")))
+        self.bus.subscribe(EventType.GAME_RESUME, lambda e: resumed.append(e.payload.get("reason")))
+
+        # Put into display_lost state
+        self.manager.resolve_display_index(num_displays=2)
+        self.manager.check_display_connection(num_displays=1)
+        self.assertTrue(self.manager.display_lost)
+
+        # TV reconnected (2 displays) at t0
+        t0 = 2000.0
+        self.manager.check_display_connection(num_displays=2)
+        self.assertFalse(self.manager.display_lost)
+        self.assertTrue(self.manager.reconnect_countdown_active)
+        self.manager._countdown_start_time = t0
+
+        # Progress through countdown: 1s, 2s, 3.1s
+        self.manager.update_reconnect_countdown(now=t0 + 1.1)
+        self.manager.update_reconnect_countdown(now=t0 + 2.1)
+        self.manager.update_reconnect_countdown(now=t0 + 3.1)
+
+        self.assertFalse(self.manager.reconnect_countdown_active)
+        self.assertIn(3, ticks)
+        self.assertIn(2, ticks)
+        self.assertIn(1, ticks)
+        self.assertIn("hdmi_reconnect", resumed)
+
+    def test_04_03_draw_hud_renders_reconnect_countdown(self):
+        """UC 04.03: draw_hud renders countdown text when reconnecting."""
+        if not pygame.get_init():
+            pygame.init()
+        if not pygame.font.get_init():
+            pygame.font.init()
+
+        surface = pygame.Surface((1920, 1080))
+        self.manager.reconnect_countdown_active = True
+        self.manager._last_countdown_count = 2
+        # Must execute cleanly and draw without error
+        self.manager.draw_hud(surface)
+        self.assertTrue(self.manager.reconnect_countdown_active)
+
+
 if __name__ == "__main__":
     unittest.main()

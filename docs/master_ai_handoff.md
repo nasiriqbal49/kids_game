@@ -39,18 +39,15 @@
 
 ### Current State (2026-10-28)
 - **Phase A (Foundation) complete:** Modules 1, 2, 3 (43 tests).
-- **Gap G3 closed:** `docs/event_contracts.md` defines Phase B event payloads.
-- **Gap G10 closed:** `engine/event_pump.py` owns the pygame event pump (6 tests).
-- **Gap G8 closed:** HUD surface scaling, player name, low-health badge, and `particles_enabled` effects toggle are fully implemented and tested.
-- **Module 4 (Display and UI) in progress:** **10 of 13 use cases fully verified** (17 display tests + 6 event pump tests = 23 tests for Module 4). Verified: 04.01, 04.02, 04.04, 04.05, 04.06, 04.07, 04.10, 04.11, 04.12, 04.13. Remaining: 04.03, 04.08, 04.09.
-- **Total test suite: 66 passing** (verified from real output): `python -m unittest discover -s tests -t . -v`.
+- **Gap G3, G8, G10 closed:** Event contracts defined, HUD scaled & rendered, EventPump integrated.
+- **Module 4 (Display and UI) in progress:** **11 of 13 use cases fully verified** (20 display tests + 6 event pump tests = 26 tests for Module 4). Verified: 04.01, 04.02, 04.03, 04.04, 04.05, 04.06, 04.07, 04.10, 04.11, 04.12, 04.13. Remaining: 04.08, 04.09 (menu drawing).
+- **Total test suite: 69 passing** (verified from real output): `python -m unittest discover -s tests -t . -v`.
 - **Git history:** `docs/git_commits.md`.
 
 ### Next Immediate Step
-- **Complete Module 4 Remaining Items:**
-  1. `04.03`: HDMI cable pulled or TV disconnected mid-game (detect display disconnect, pause with `reason="hdmi_disconnect"`, resume with 3-second countdown after reconnected).
-  2. `04.08` & `04.09`: Menu drawing abstractions (Main Menu, Pause Menu, Results overlay with keyboard navigation).
-  3. Live TV check (Gap G9): `main.py` interactive test loop showing 1080p HUD at 60 FPS on the TV driven by EventPump and Keyboard.
+- **Finish Module 4 (Display and UI):**
+  1. `04.08` & `04.09`: Menu drawing and state rendering (`draw_menu()` for Main Menu, Profile Select, Pause, Game Over, and Results) with keyboard navigation fallback.
+  2. Live TV check (Gap G9): `main.py` interactive verification loop showing the 1080p HUD and menu navigation on the TV at 60 FPS.
 - **Then Proceed to Module 5 (Audio Manager)** in `engine/audio.py`.
 
 ### Known open items

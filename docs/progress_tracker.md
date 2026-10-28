@@ -3,7 +3,7 @@
 **Last Updated:** 2026-10-28
 **Current Milestone Target:** Milestone M1 (Keyboard Runner)
 **Current Phase:** Phase A (Foundation) complete; Phase B (Playable game with keyboard) in progress (Module 4)
-**Verified unit tests (from real output):** 66 run, 66 passing (verified 2026-10-28) (`python -m unittest discover -s tests -t .`)
+**Verified unit tests (from real output):** 69 run, 69 passing (verified 2026-10-28) (`python -m unittest discover -s tests -t .`)
 
 > **Rule for this file:** a use case is "Pass" only if a test carrying its ID exists, runs, and passed in output pasted by the owner. A module is DONE only when every P1 and P2 use case has a passing test; any deferred use case is listed explicitly below. See `docs/AI_START_HERE.md`.
 
@@ -14,7 +14,7 @@
 | **1** | **Config and Logging** | **A** | **10** | **DONE (01.10 deferred, P3)** | 2026-10-28 | 9 of 10 verified, 20 tests (15 config, 5 logger). 01.10 privacy filter deferred (P3). |
 | **2** | **Event Bus** | **A** | **11** | **DONE** | 2026-10-28 | 11 of 11 verified, 13 tests (11 catalogue + 2 extra: consecutive-failure reset, concurrent posting). Thread-safe lock added after review. |
 | **3** | **Input Adapter (Keyboard)** | **A** | **9** | **DONE (03.07 partial)** | 2026-10-28 | 9 of 9 have tests, 10 tests. 03.07 covers pause and debug only; quit and recalibrate keys deferred until those features exist. |
-| **4** | **Display and UI** | **B** | **13** | **IN PROGRESS (10 of 13 fully verified)** | 2026-10-28 | 17 display tests. Verified: 04.01, 04.02, 04.04, 04.05, 04.06, 04.07, 04.10, 04.11, 04.12, 04.13. G8 closed (HUD scaling, low-health badge, particles toggle, player name drawn). Not started: 04.03, 04.08, 04.09. | Partial: 04.06, 04.07, 04.10, 04.12 (4). Not started: 04.03, 04.08, 04.09 (3). See detailed log. |
+| **4** | **Display and UI** | **B** | **13** | **IN PROGRESS (11 of 13 verified)** | 2026-10-28 | 20 display tests (+6 pump). Verified: 04.01–04.07, 04.10–04.13. G8 & G10 closed. 04.03 verified (HDMI pulled auto-pause & 3s countdown). Remaining: 04.08, 04.09 (menus). |
 | 5 | Audio Manager | B | 10 | PENDING | - | HDMI TV audio, SFX mixing. |
 | 6 | Game Engine Core | B | 12 | PENDING | - | State machine, fixed-timestep loop. |
 | 7 | Game Mechanics Library | B | 15 | PENDING | - | Spawning, hitboxes, power-ups. |
@@ -39,12 +39,12 @@
 | Test file | Tests |
 |---|---|
 | `tests/test_config.py` | 15 |
-| `tests/test_display.py` | 17 |
+| `tests/test_display.py` | 20 |
 | `tests/test_event_bus.py` | 13 |
 | `tests/test_event_pump.py` | 6 |
 | `tests/test_input_keyboard.py` | 10 |
 | `tests/test_logger.py` | 5 |
-| **Total** | **66** |
+| **Total** | **69** |
 
 ---
 
@@ -97,7 +97,7 @@
 - **Use cases:**
   - `04.01` TV on display index 1 is selected when present: **Pass** (`test_04_01`, simulated display count; real TV not yet tested)
   - `04.02` Fallback to screen 0 when the TV is not found: **Pass** (`test_04_02`, simulated display count)
-  - `04.03` HDMI pulled or TV off mid-game: **NOT STARTED**
+  - `04.03` HDMI pulled or TV off mid-game: **Pass** (`test_04_03_display_disconnect_publishes_pause`, `test_04_03_display_reconnect_starts_countdown_and_resumes`, `test_04_03_draw_hud_renders_reconnect_countdown`)
   - `04.04` 1080p render surface: **Pass** (`test_04_04`, headless; real fullscreen on the 4K TV not yet tested)
   - `04.05` HUD state updates from events: **Pass** (`test_04_05`, state only; per-frame drawing not tested)
   - `04.06` Low-health warning: **Pass** (`test_04_06_low_health_flag_triggered`, `test_04_06_draw_hud_renders_low_health_badge`)

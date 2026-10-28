@@ -59,6 +59,12 @@ class DisplayManager:
         self._last_flash_time: float = -1.0
         self._flash_active_until: float = -1.0
 
+        # Display connection monitoring (UC 04.03)
+        self.display_lost: bool = False
+        self.reconnect_countdown_active: bool = False
+        self._countdown_start_time: float = 0.0
+        self._last_countdown_count: int = -1
+
         # Subscribe to gameplay and state events
         self._subscribe_events()
 
@@ -143,6 +149,67 @@ class DisplayManager:
         elif current_fps >= 55.0 and self.reduced_effects:
             self.reduced_effects = False
             log.info("Frame rate recovered to %.1f FPS. Full effects restored.", current_fps)
+
+    def check_display_connection(self, num_displays: Optional[int] = None) -> bool:
+        """
+        Monitors HDMI / target display connection state (UC 04.03).
+        - If target display is unplugged mid-game, auto-pauses with reason='hdmi_disconnect'.
+        - When reconnected, starts a 3-second countdown before resuming.
+        """
+        if num_displays is None:
+            if not pygame.get_init():
+                return not self.display_lost
+            num_displays = pygame.display.get_num_displays()
+
+        target_index = self.config.get("display.display_index", 1)
+
+        # 1. Target display was active but is now missing (HDMI pulled)
+        if self.tv_found and num_displays <= target_index:
+            if not self.display_lost:
+                self.display_lost = True
+                self.tv_found = False
+                log.warning("Target display disconnected (HDMI pulled)! Auto-pausing game (UC 04.03).")
+                self.bus.publish(Event(EventType.GAME_PAUSE, {"reason": "hdmi_disconnect"}))
+            return False
+
+        # 2. Target display was lost but has now reconnected
+        if self.display_lost and num_displays > target_index:
+            self.display_lost = False
+            self.tv_found = True
+            self.reconnect_countdown_active = True
+            self._countdown_start_time = time.time()
+            self._last_countdown_count = 3
+            log.info("Target display reconnected. Starting 3-second countdown before resume (UC 04.03).")
+            self.bus.publish(Event(EventType.COUNTDOWN_TICK, {"count": 3}))
+            return True
+
+        return not self.display_lost
+
+    def update_reconnect_countdown(self, now: Optional[float] = None) -> Optional[int]:
+        """
+        Advances the 3-second resume countdown after HDMI reconnection (UC 04.03).
+        Publishes COUNTDOWN_TICK on second boundaries and GAME_RESUME when complete.
+        """
+        if not self.reconnect_countdown_active:
+            return None
+
+        current_time = now if now is not None else time.time()
+        elapsed = current_time - self._countdown_start_time
+        remaining = max(0, 3 - int(elapsed))
+
+        if remaining != self._last_countdown_count:
+            self._last_countdown_count = remaining
+            self.bus.publish(Event(EventType.COUNTDOWN_TICK, {"count": remaining}))
+
+        if elapsed >= 3.0:
+            self.reconnect_countdown_active = False
+            log.info("Reconnect countdown finished. Resuming game (UC 04.03).")
+            self.bus.publish(Event(EventType.GAME_RESUME, {"reason": "hdmi_reconnect"}))
+            return 0
+
+        return remaining
+
+
 
     def process_window_events(self, events: Optional[list] = None) -> list:
         """
@@ -279,6 +346,16 @@ class DisplayManager:
             flash_overlay = pygame.Surface((sw, sh), pygame.SRCALPHA)
             flash_overlay.fill((*COLOR_FLASH, MAX_FLASH_ALPHA))
             surface.blit(flash_overlay, (0, 0))
+
+        # 5. Display Disconnect / Reconnect Countdown Overlay (UC 04.03)
+        if self.display_lost:
+            banner_font = pygame.font.Font(None, max(36, int(MIN_STAT_FONT_SIZE * scale_y)))
+            banner_surf = banner_font.render("TV DISCONNECTED - GAME PAUSED", True, COLOR_HEALTH_LOW)
+            surface.blit(banner_surf, (sw // 2 - banner_surf.get_width() // 2, sh // 2 - 30))
+        elif self.reconnect_countdown_active:
+            count_font = pygame.font.Font(None, max(48, int(72 * scale_y)))
+            count_surf = count_font.render(f"RESUMING IN {self._last_countdown_count}...", True, (241, 196, 15))
+            surface.blit(count_surf, (sw // 2 - count_surf.get_width() // 2, sh // 2 - 30))    
 
     def close(self) -> None:
         if pygame.get_init():
