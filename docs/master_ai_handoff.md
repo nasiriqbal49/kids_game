@@ -39,18 +39,22 @@
 
 ### Current State (2026-10-29)
 - **Phase A (Foundation) certified:** Modules 1, 2, 3 (43 tests).
-- **Phase B (Playable Game with Keyboard) COMPLETE (Milestone M1 Achieved):** Modules 4, 5, 6, 7, 8 (70 tests).
-- **Phase C (Computer Vision & Tracking) in progress:**
-  - **Module 9 (Camera Manager) COMPLETE:** 12 tests (`tests/test_camera_manager.py`). Background acquisition thread (09.01, 09.09), camera disconnect & reconnect retry loop (09.02, 09.03, 09.04), busy camera reporting (09.05), stale frame detection (09.06), hardware device discovery & picker (09.07), low FPS detection & auto-downscale (09.08), secondary camera throttling under bandwidth pressure (09.10), horizontal mirroring (09.12), clean shutdown (09.14). 09.11 OS permissions & 09.13 auto-exposure deferred.
-- **Total Test Suite:** **125 verified passing unit tests** across 11 test files (`python -m unittest discover -s tests -t . -v`).
-- **Dependencies:** `pygame==2.6.1`, `opencv-python>=4.8.0`, `numpy>=2.0.0`.
+- **Phase B (Playable Game with Keyboard) certified (Milestone M1):** Modules 4, 5, 6, 7, 8 (70 tests).
+- **Phase C (Computer Vision & Tracking) certified (Milestone M2):**
+  - **Module 9 (Camera Manager):** 12 tests (`tests/test_camera_manager.py`).
+  - **Module 10 (Debug & Replay Tools):** 8 tests (`tests/test_debug_tools.py`).
+  - **Module 11 (Pose Tracker):** 8 tests (`tests/test_pose_tracker.py`).
+  - **Module 12 (Zone and Calibration):** 6 tests (`tests/test_zone_calibration.py`).
+  - **Module 13 (Player Lock):** 6 tests (`tests/test_player_lock.py`).
+  - **Module 14 (Action Detector):** 9 tests (`tests/test_action_detector.py`).
+- **Total Test Suite:** **162 verified passing unit tests** across 16 test files (`python -m unittest discover -s tests -t . -v`).
+- **Milestones Achieved:**
+  - **Milestone M1:** Playable Keyboard Runner certified.
+  - **Milestone M2:** Body Control Action Tracking certified.
 
-### Next Immediate Step
-- **Begin Module 10: Debug and Replay Tools** in `vision/debug_tools.py`:
-  - Visual overlay view showing camera frame, skeleton, zone outline, and live signals (10.01).
-  - Landmark session recording to local JSON without saving raw video (privacy-first, 10.02).
-  - Replay system feeding recorded sessions back through tracking chain deterministically (10.03).
-  - Satisfy use cases 10.01 to 10.07.
+### Next Immediate Step (When resuming at home)
+- **Option A (Live Camera Test):** Wire the vision pipeline into `main.py` to play the runner live using real body movements in front of the webcam.
+- **Option B (Phase D: Profiles):** Begin **Module 15: Profile Manager** in `identity/profile_manager.py` (profiles, virtual coin shop, avatar customization, rolling backups).
 
 ### Known open items
 See "Known gaps and open items" in `docs/progress_tracker.md` (G1, G2, G4, G5, G6 open).

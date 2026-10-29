@@ -43,9 +43,11 @@ kids_game/
 │   └── kidsgame.log
 ├── tests
 │   ├── __init__.py
+│   ├── test_action_detector.py
 │   ├── test_audio.py
 │   ├── test_camera_manager.py
 │   ├── test_config.py
+│   ├── test_debug_tools.py
 │   ├── test_display.py
 │   ├── test_event_bus.py
 │   ├── test_event_pump.py
@@ -53,7 +55,10 @@ kids_game/
 │   ├── test_game_runner.py
 │   ├── test_input_keyboard.py
 │   ├── test_logger.py
-│   └── test_mechanics.py
+│   ├── test_mechanics.py
+│   ├── test_player_lock.py
+│   ├── test_pose_tracker.py
+│   └── test_zone_calibration.py
 ├── tools
 │   ├── extract_module.py
 │   ├── make_session_diff.py
@@ -61,7 +66,12 @@ kids_game/
 │   └── update_git_commits.py
 ├── vision
 │   ├── __init__.py
-│   └── camera_manager.py
+│   ├── action_detector.py
+│   ├── camera_manager.py
+│   ├── debug_tools.py
+│   ├── player_lock.py
+│   ├── pose_tracker.py
+│   └── zone_calibration.py
 ├── .gitignore
 ├── .gitingestignore
 ├── config.json
