@@ -26,6 +26,9 @@ kids_game/
 │   ├── project_directory_structure.md
 │   └── use_case_catalogue.md
 ├── engine
+│   ├── games
+│   │   ├── __init__.py
+│   │   └── runner.py
 │   ├── mechanics
 │   │   ├── __init__.py
 │   │   ├── entities.py
@@ -45,6 +48,7 @@ kids_game/
 │   ├── test_event_bus.py
 │   ├── test_event_pump.py
 │   ├── test_game_engine.py
+│   ├── test_game_runner.py
 │   ├── test_input_keyboard.py
 │   ├── test_logger.py
 │   └── test_mechanics.py

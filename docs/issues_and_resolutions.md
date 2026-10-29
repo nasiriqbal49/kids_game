@@ -143,3 +143,12 @@ This document tracks every error, edge-case hurdle, or design correction encount
 - **Root Cause:** Input adapter was created in Phase A before the event contracts were formalized in Phase B.
 - **Resolution:** Updated `core/input_keyboard.py` to dispatch `{"reason": "parent_key", "action": "toggle"}`. Conforms to `event_contracts.md` while preserving unpause toggle capability in `GameEngine`.
 - **Status:** **Resolved & Verified**
+
+---
+
+### Issue #017: Obstacle collision evaluated without lane check; damage duplication
+- **Module:** Module 7 (Game Mechanics) / Module 8 (Runner)
+- **Symptom:** Hurdles and high bars dealt damage regardless of which lane the player occupied; player also took double damage (40 HP instead of 20 HP).
+- **Root Cause:** `check_obstacle_interaction()` in `manager.py` only checked player posture action (jump/duck) without checking if `player_lane == obstacle.lane`. An accidental duplicate damage deduction line also subtracted damage twice.
+- **Resolution:** Added a lane comparison check so obstacles in other lanes are safely bypassed (`is_cleared = True`); consolidated damage deduction to single application using `self.damage_per_hit = 20`. All 113 unit tests verified.
+- **Status:** **Resolved & Verified**

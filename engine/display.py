@@ -65,11 +65,11 @@ class DisplayManager:
         self._countdown_start_time: float = 0.0
         self._last_countdown_count: int = -1
 
-        # Menu state & navigation (UC 04.08, 04.09)
-        self.menu_title: Optional[str] = None
-        self.menu_items: list = []
+# Menu state & navigation (UC 04.08, 04.09)
+        self.menu_title: Optional[str] = "KIDS MOTION GAME"
+        self.menu_items: list = ["Start Game", "Quit"]
         self.selected_item_index: int = 0
-        self.hold_select_duration: float = 1.0  # 1.0s deliberate hold (UC 04.08)
+        self.hold_select_duration: float = 1.0
         self.hold_select_timer: float = 0.0
         self.current_state: str = "MENU"
 
@@ -254,12 +254,10 @@ class DisplayManager:
         new_state = event.payload.get("new_state", "MENU")
         self.current_state = new_state
         if new_state == "MENU":
-            self.set_menu("KIDS MOTION GAME", ["Start Game", "Profiles", "Settings", "Quit"])
+            self.set_menu("KIDS MOTION GAME", ["Start Game", "Quit"])
         elif new_state == "PAUSED":
             self.set_menu("GAME PAUSED", ["Resume", "Restart", "Quit to Menu"])
-        elif new_state == "GAME_OVER":
-            self.set_menu("GAME OVER", ["Play Again", "Main Menu"])
-        elif new_state == "PLAYING":
+        elif new_state in ("PLAYING", "RESULTS", "GAME_OVER"):
             self.clear_menu()
 
     def set_menu(self, title: str, items: list) -> None:

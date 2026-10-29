@@ -13,7 +13,7 @@ class MechanicsManager:
     Reusable gameplay mechanics library (Module 7):
     - Health, damage, and invulnerability window (UC 07.02, 07.03)
     - Score, streaks, and multipliers (UC 07.01, 07.11)
-    - Collision verification against player posture/actions (UC 07.01, 07.05, 07.12, 07.14)
+    - Collision verification against player posture/actions and lanes (UC 07.01, 07.05, 07.12, 07.14)
     - Power-ups lifecycle, duration, shield absorption, and slow-down (UC 07.06 - 07.09, 07.13)
     - Minimum spawn spacing and off-screen object pruning (UC 07.10, 07.15)
     """
@@ -25,6 +25,7 @@ class MechanicsManager:
         # Health & State
         self.health: int = 100
         self.max_health: int = 100
+        self.damage_per_hit: int = 20  # Standard 20 HP damage per hit
         self.invulnerable_timer: float = 0.0
         self.invulnerability_duration_sec: float = 1.0  # 1s invulnerability (UC 07.02)
         self.forgiving_hitbox: bool = self.config.get("gameplay.forgiving_hitbox", True)
@@ -123,10 +124,14 @@ class MechanicsManager:
         if obstacle.cleared or obstacle.hit:
             return "ALREADY_RESOLVED"
 
-        # 1. Check if player's action clears the obstacle
+        # 1. Lane check: if the obstacle is in a different lane, player safely bypasses it! (UC 07.14)
         is_cleared = False
-        if obstacle.obstacle_type == "lane_barrier":
-            is_cleared = (self.player_lane != obstacle.lane)
+        if obstacle.lane is not None and obstacle.lane != -1 and self.player_lane != obstacle.lane:
+            is_cleared = True
+        elif obstacle.obstacle_type == "lane_barrier":
+            # Player is in the barrier lane and cannot jump/duck through a solid block
+            is_cleared = False
+            obstacle.timing_feedback = "wrong_lane"
         elif obstacle.action_required == "JUMP":
             if self.player_action == "JUMP":
                 is_cleared = True
@@ -176,8 +181,8 @@ class MechanicsManager:
             self.bus.publish(Event(EventType.POWERUP_EXPIRED, {"powerup_type": "shield"}))
             return "HIT"
 
-        # Damage applied
-        damage = 20
+        # Damage applied (only once!)
+        damage = self.damage_per_hit
         self.health = max(0, self.health - damage)
         self.streak = 0
         self.invulnerable_timer = self.invulnerability_duration_sec

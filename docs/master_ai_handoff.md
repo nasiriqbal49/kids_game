@@ -37,24 +37,26 @@
 
 ## 4. Current Exact State & Next Immediate Step
 
-### Current State (2026-10-28)
-- **Phase A (Foundation) complete & certified:** Modules 1, 2, 3 (43 tests).
-- **Phase B (Playable Game with Keyboard) in progress:**
-  - **Module 4 (Display and UI) COMPLETE:** 24 display tests + 6 event pump tests = 30 tests. All 13 use cases verified (04.01–04.13).
-  - **Module 5 (Audio Manager) COMPLETE:** 7 audio tests. Core use cases verified (05.01–05.08; 05.09 and 05.10 deferred P3).
-  - **Module 6 (Game Engine Core) COMPLETE:** 11 engine tests (`tests/test_game_engine.py`). Use cases 06.01–06.11 verified (06.12 deferred P3).
-  - **Module 7 (Game Mechanics Library) COMPLETE:** 15 mechanics tests (`tests/test_mechanics.py`). All 15 use cases verified (07.01–07.15).
-  - **Interactive Runner (`main.py`):** Verified live at 60 FPS with scaled HUD, posture avatar, keyboard input pump, and procedural audio.
-- **Total Test Suite:** **106 verified passing unit tests** across 9 test files (`python -m unittest discover -s tests -t . -v`).
-- **Gaps Closed:** G3, G7, G8, G9, G10, G11 closed.
-- **Git History:** `docs/git_commits.md`.
+### Current State (2026-10-29)
+- **Phase A (Foundation) certified:** Modules 1, 2, 3 (43 tests).
+- **Phase B (Playable Game with Keyboard) COMPLETE (Milestone M1 Achieved):**
+  - **Module 4 (Display and UI):** 30 tests (24 display + 6 pump).
+  - **Module 5 (Audio Manager):** 7 tests.
+  - **Module 6 (Game Engine Core):** 11 tests.
+  - **Module 7 (Game Mechanics Library):** 15 tests.
+  - **Module 8 (Game 1: Runner):** 7 tests.
+  - **Interactive Runner (`main.py`):** Fully playable 3-lane pseudo-3D perspective game at 60 FPS with jump arc, crouch duck, lane shifting, procedural sound effects, HUD, obstacles, collectibles, speed ramping, and results screen.
+- **Total Test Suite:** **113 verified passing unit tests** across 10 test files (`python -m unittest discover -s tests -t . -v`).
+- **Milestone Reached:** **Milestone M1 (Keyboard Runner)** certified.
 
 ### Next Immediate Step
-- **Begin Module 8: Game 1: Runner** in `engine/games/runner.py`:
-  - Milestone M1: Fully playable start-to-finish runner with keyboard.
-  - Implement 3-lane pseudo-perspective scrolling road, obstacles, and collectibles.
-  - Wire GameEngine, MechanicsManager, DisplayManager, and AudioManager into a unified loop.
-  - Satisfy use cases 08.01 to 08.08.
+- **Begin Phase C: Computer Vision & Tracking**:
+  - **Module 9: Camera Manager** in `vision/camera_manager.py`:
+    - List cameras and map roles (laptop webcam first, phones later) (09.01, 09.07).
+    - Acquire timestamped frames in background thread at target FPS (09.01, 09.09).
+    - Camera disconnect detection & reconnect retry loop (09.03, 09.04).
+    - Fallback to keyboard mode on camera lost (09.02).
 
 ### Known open items
 See "Known gaps and open items" in `docs/progress_tracker.md` (G1, G2, G4, G5, G6 open).
+

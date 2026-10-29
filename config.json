@@ -21,7 +21,7 @@
         "mirror": true
     },
     "gameplay": {
-        "sensitivity": "normal",
+        "sensitivity": "easy",
         "idle_timeout_sec": 300,
         "forgiving_hitbox": true
     },

@@ -530,3 +530,17 @@ Foundation first so nothing is hard-coded. Then a full game with the keyboard, s
 - Which game should be Game 2 and Game 3?
 - Do you want a parent mode (settings, recalibration, profile management) protected from the kids?
 - Any missing requirement, module or sequence you want added?
+
+---
+
+## Change Log
+
+### 2026-10-29: Game Camera Gating & Portable Setup Configurator
+- **What changed:**
+  1. **Game Camera Gating (FR-A7 / FR-C6):** Games declare minimum camera requirements (1, 2, or 3 cameras). When fewer cameras are connected than a game requires, that game is disabled in the menu with a clear explanation (e.g. `[ Requires 2 Cameras — Connect Side Camera ]`).
+  2. **Camera Role Assignment & Setup Configurator (Module 9 / Module 12):** When camera topology changes or the setup moves to a new room, a guided setup wizard runs:
+     - Detects available video capture devices (laptop webcam, phone webcams via USB/Wi-Fi).
+     - Provides a visual device-to-role assignment picker (Front Tracker, Side Jump Confirmer, Setup/Menu).
+     - Validates distance from the TV (9–10 ft recommended) to verify full-body framing before starting.
+- **Why:** Ensures the game can run anywhere on any laptop and with any combination of phones/webcams without code changes.
+- **Approved by:** Nasir (Owner).

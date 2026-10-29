@@ -1,9 +1,9 @@
 # Kids Motion Game - Development & Use-Case Progress Tracker
 
-**Last Updated:** 2026-10-28
-**Current Milestone Target:** Milestone M1 (Keyboard Runner)
-**Current Phase:** Phase A (Foundation) complete; Phase B (Playable game with keyboard) in progress (Module 8)
-**Verified unit tests (from real output):** 106 run, 106 passing (verified 2026-10-28) (`python -m unittest discover -s tests -t .`)
+**Last Updated:** 2026-10-29
+**Current Milestone Target:** Milestone M2 (Body Control & Vision Tracking)
+**Current Phase:** Phase B complete (Milestone M1 achieved); Phase C in preparation
+**Verified unit tests (from real output):** 113 run, 113 passing (verified 2026-10-29) (`python -m unittest discover -s tests -t .`)
 
 > **Rule for this file:** a use case is "Pass" only if a test carrying its ID exists, runs, and passed in output pasted by the owner. A module is DONE only when every P1 and P2 use case has a passing test; any deferred use case is listed explicitly below. See `docs/AI_START_HERE.md`.
 
@@ -18,8 +18,8 @@
 | **5** | **Audio Manager** | **B** | **10** | **DONE (05.09, 05.10 deferred, P3)** | 2026-10-28 | 7 tests. In-memory procedural synth (05.03), volume cap & mute (05.06), low-health alert state (05.07), pause/resume channels (05.08), priority channel for hits/game-over (05.02), state-controlled looping (05.05). |
 | **6** | **Game Engine Core** | **B** | **12** | **DONE (06.12 deferred, P3)** | 2026-10-28 | 11 tests. Fixed timestep loop (06.07), state machine transitions & legal table (06.01, 06.02), parent pause & zone auto-pause (06.03, 06.04), zero health game over (06.05), difficulty ramp (06.06), error boundary (06.08), idle timeout (06.09), quit mid-game (06.10), reset (06.11). 06.12 session reminder deferred (P3). |
 | **7** | **Game Mechanics Library** | **B** | **15** | **DONE** | 2026-10-28 | 15 tests. Cleared by jump/duck/lean (07.01, 07.05, 07.14), damage & 1.0s invulnerability (07.02, 07.03), timing feedback & forgiving hitboxes (07.04), powerup expiration & refresh (07.06, 07.07), shield absorb (07.08), health refill bonus points (07.09), minimum spawn spacing (07.10), streak reset on hit (07.11), airborne high-bar collision (07.12), slow_down speed scale (07.13), lane barrier collision (07.14), off-screen pruning for flat memory (07.15). |
-| 8 | Game 1: Runner | B | 9 | UP NEXT | - | Milestone M1: Runner game loop, 3-lane road renderer, obstacle patterns, keyboard play start-to-finish. |
-| 9 | Camera Manager | C | 14 | PENDING | - | OpenCV frame acquisition thread. |
+| **8** | **Game 1: Runner** | **B** | **9** | **DONE (08.07, 08.09 deferred)** | 2026-10-29 | **MILESTONE M1 ACHIEVED**. 7 tests. Full 3-lane perspective runner with jump air-time lockout (08.03), idle player damage & game over (08.02), personal best tracking (08.04), difficulty presets & speed cap (08.05, 08.06), and results screen (08.08). 08.07 tutorial deferred to Phase D profiles; 08.09 camera play deferred to Phase C. |
+| 9 | Camera Manager | C | 14 | UP NEXT | - | OpenCV frame acquisition thread, camera reconnect & resolution scaling. |
 | 10 | Debug & Replay Tools | C | 9 | PENDING | - | Landmark recorder and visual overlay. |
 | 11 | Pose Tracker | C | 12 | PENDING | - | MediaPipe body tracking at 30 FPS. |
 | 12 | Zone & Calibration | C | 12 | PENDING | - | Tile boundaries & floor scale. |
@@ -34,7 +34,7 @@
 
 ---
 
-## Test counts by file (verified 2026-10-28)
+## Test counts by file (verified 2026-10-29)
 
 | Test file | Tests |
 |---|---|
@@ -47,7 +47,8 @@
 | `tests/test_audio.py` | 7 |
 | `tests/test_game_engine.py` | 11 |
 | `tests/test_mechanics.py` | 15 |
-| **Total** | **106** |
+| `tests/test_game_runner.py` | 7 |
+| **Total** | **113** |
 
 ---
 
@@ -163,6 +164,19 @@
   - `07.14` Lane barrier collides in active lane, clears when player changed lane: **Pass** (`test_07_14`)
   - `07.15` Off-screen obstacles (z < -100) pruned to keep memory flat: **Pass** (`test_07_15`)
 
+
+### Module 8: Game 1: Runner (Milestone M1)
+- **Files:** `engine/games/__init__.py`, `engine/games/runner.py`, `tests/test_game_runner.py` (7 tests)
+- **Use cases verified:**
+  - `08.01` Complete run from start to game over: **Pass** (`test_08_01`)
+  - `08.02` Kid does nothing: obstacles deal damage and transition to RESULTS at 0 HP: **Pass** (`test_08_02`)
+  - `08.03` Air-time lockout prevents jump-spamming until landing: **Pass** (`test_08_03`)
+  - `08.04` New personal best recorded only on game over when score exceeds previous best: **Pass** (`test_08_04`)
+  - `08.05` Difficulty presets (easy, normal, strict) configure speed scaling & damage: **Pass** (`test_08_05`)
+  - `08.06` Speed caps at preset maximum: **Pass** (`test_08_06`)
+  - `08.07` First-time tutorial: **Deferred to Phase D (Profiles)**
+  - `08.08` Results screen renders stats summary (score, best, cleared, streak): **Pass** (`test_08_08`)
+  - `08.09` Camera vs keyboard: **Deferred to Phase C (Vision Tracking)**
 
 ---
 

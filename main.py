@@ -8,6 +8,8 @@ from core.input_keyboard import KeyboardInputAdapter
 from engine.display import DisplayManager
 from engine.event_pump import EventPump
 from engine.audio import AudioManager
+from engine.games.runner import RunnerGame
+from engine.game_engine import GameState
 
 # 1. Setup Logging and Config
 setup_logging()
@@ -15,7 +17,7 @@ cfg = get_config()
 configure_from(cfg)
 log = get_logger("main")
 
-log.info("--- Starting Kids Motion Game (Interactive Display Test) ---")
+log.info("--- Starting Kids Motion Game (Milestone M1: Keyboard Runner) ---")
 
 
 def run():
@@ -25,147 +27,101 @@ def run():
     audio = AudioManager(bus=bus, cfg=cfg)
     pump = EventPump(display=display, keyboard=keyboard)
 
-    # Open window (automatically picks laptop screen 0 in office; TV at home)
+    # Initialize display window (auto-targets TV at index 1 or laptop screen at 0)
     display.init_display(headless=False)
     screen = display.screen
     clock = display.clock
 
-    # Mock game tracking variables for visual test
-    current_action = "STAND"
-    streak_count = 0
-    score_count = 0
-    jump_timer = 0.0  # Tracks jump air-time
+    # Instantiate Runner Game (Module 8)
+    runner = RunnerGame(bus=bus, cfg=cfg, display=display, audio=audio)
 
-    # Local listeners to update test state
-    def on_jump(e):
-        nonlocal current_action, score_count, streak_count
-        current_action = "JUMP"
-        score_count += 50
-        streak_count += 1
-        bus.publish(Event(EventType.SCORE_CHANGED, {"score": score_count, "delta": 50}))
-        bus.publish(Event(EventType.STREAK_CHANGED, {"streak": streak_count, "multiplier": 1.0}))
-
-    def on_duck(e):
-        nonlocal current_action
-        current_action = "DUCK"
-
-    def on_stand(e):
-        nonlocal current_action
-        current_action = "STAND"
-
-    def on_lean(e):
-        nonlocal current_action
-        current_action = e.name
-
-    bus.subscribe(EventType.JUMP, on_jump)
-    bus.subscribe(EventType.DUCK, on_duck)
-    bus.subscribe(EventType.STAND, on_stand)
-    bus.subscribe(EventType.LEAN_LEFT, on_lean)
-    bus.subscribe(EventType.LEAN_RIGHT, on_lean)
-    bus.subscribe(EventType.LEAN_CENTER, on_lean)
-
-    # Start in PLAYING state so HUD is visible immediately
-    bus.publish(Event(EventType.STATE_CHANGED, {"old_state": "MENU", "new_state": "PLAYING"}))
+    # Start gameplay immediately
+    runner.start_new_game()
 
     log.info("Controls:")
-    log.info("  [Space]       - JUMP (adds points & streak)")
-    log.info("  [Down Arrow]  - DUCK (hold to duck, release to stand)")
-    log.info("  [Left/Right]  - LEAN LEFT / LEAN RIGHT")
-    log.info("  [H]           - Simulate OBSTACLE HIT (damage + red flash)")
-    log.info("  [R]           - REFILL HEALTH (100 HP)")
-    log.info("  [Ctrl + P]    - Toggle PAUSE MENU (Up/Down to navigate, Enter to select)")
-    log.info("  [Esc]         - QUIT test")
+    log.info("  [Space]       - JUMP over low hurdles (air-time locked)")
+    log.info("  [Down Arrow]  - DUCK under high bars (hold to crouch)")
+    log.info("  [Left/Right]  - LEAN to switch lanes (Left, Center, Right)")
+    log.info("  [Up/Down]     - Navigate Menus / Results Screen")
+    log.info("  [Enter/Space] - Select option in Menu / Results Screen")
+    log.info("  [Ctrl + P]    - Toggle PAUSE MENU")
+    log.info("  [Esc]         - QUIT game")
 
     running = True
     while running and not display.quit_requested:
-        # 1. Process OS and Keyboard Events through EventPump (Gap G10)
+        dt = clock.tick(60) / 1000.0  # Lock at 60 FPS, dt in seconds
+
         events = pygame.event.get()
+        pump_events = []
 
         for event in events:
             if event.type == pygame.KEYDOWN:
-                # Quit test on Escape
                 if event.key == pygame.K_ESCAPE:
                     running = False
-                # Test helper: 'H' key simulates obstacle hit
-                elif event.key == pygame.K_h:
-                    current_hp = max(0, display.hud_state["health"] - 20)
-                    streak_count = 0
-                    bus.publish(Event(EventType.OBSTACLE_HIT, {"obstacle_type": "low_hurdle"}))
-                    bus.publish(Event(EventType.HEALTH_CHANGED, {"current": current_hp, "max": 100, "delta": -20, "is_low": current_hp <= 25}))
-                    bus.publish(Event(EventType.STREAK_CHANGED, {"streak": 0, "multiplier": 1.0}))
-                # Test helper: 'R' key refills health
-                elif event.key == pygame.K_r:
-                    bus.publish(Event(EventType.HEALTH_CHANGED, {"current": 100, "max": 100, "delta": 100, "is_low": False}))
-                # Menu navigation keys when menu is open
-                elif display.menu_title:
+
+                # 1. Results Screen Navigation (Play Again vs Main Menu)
+                elif runner.engine.state == GameState.RESULTS:
+                    if event.key == pygame.K_UP:
+                        runner.results_nav_prev()
+                    elif event.key == pygame.K_DOWN:
+                        runner.results_nav_next()
+                    elif event.key in (pygame.K_SPACE, pygame.K_RETURN):
+                        choice = runner.results_select()
+                        log.info("Results choice selected: %s", choice)
+                        if choice == "Play Again":
+                            runner.start_new_game()
+                        elif choice == "Main Menu":
+                            runner.engine.transition_to(GameState.MENU)
+
+                # 2. Main Menu / Pause Menu Navigation
+                elif runner.engine.state in (GameState.MENU, GameState.PAUSED):
                     if event.key == pygame.K_UP:
                         display.menu_nav_prev()
                     elif event.key == pygame.K_DOWN:
                         display.menu_nav_next()
-                    elif event.key == pygame.K_RETURN:
+                    elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
                         selected = display.menu_select_instant()
-                        log.info("Menu selected: %s", selected)
-                        if selected in ("Resume", "Start Game", "Play Again"):
-                            bus.publish(Event(EventType.STATE_CHANGED, {"old_state": display.current_state, "new_state": "PLAYING"}))
+                        log.info("Menu choice selected: %s", selected)
+                        if selected in ("Start Game", "Play Again", "Restart"):
+                            runner.start_new_game()
+                        elif selected == "Resume":
+                            runner.engine.transition_to(GameState.PLAYING)
                         elif selected in ("Quit", "Quit to Menu"):
-                            running = False
+                            if runner.engine.state == GameState.PAUSED:
+                                runner.engine.transition_to(GameState.MENU)
+                            else:
+                                running = False
+
+                # 3. Active Gameplay Jump Request
+                elif event.key == pygame.K_SPACE and runner.engine.state == GameState.PLAYING:
+                    runner.request_jump()
+                else:
+                    pump_events.append(event)
+            else:
+                pump_events.append(event)
 
         # Feed non-intercepted events into EventPump
-        pump.pump(events)
+        pump.pump(pump_events)
 
-        # 2. Check Display connection & FPS health (UC 04.03, 04.10)
+        # Monitor display connection & frame rate
         display.check_display_connection()
-        clock.tick(60)  # Lock at 60 FPS
-        # Auto-land after 0.5s air time if jumping
-        if current_action == "JUMP":
-            jump_timer += 1.0 / 60.0
-            if jump_timer >= 0.5:
-                current_action = "STAND"
-                jump_timer = 0.0
-                bus.publish(Event(EventType.LAND))
-        current_fps = clock.get_fps()
-        display.check_fps(current_fps)
+        display.check_fps(clock.get_fps())
 
-        # 3. Render Background & Motion Avatar
-        screen.fill((25, 30, 45))  # Dark navy background
+        # Update game world
+        runner.update(dt)
 
-        sw, sh = screen.get_width(), screen.get_height()
+        # Render 3D Perspective Road, Obstacles, Player Avatar, and HUD
+        runner.draw(screen)
 
-        # Draw a visual box representing the player's posture
-        box_w, box_h = 100, 160
-        box_x = sw // 2 - box_w // 2
-        box_y = sh // 2 - 20
-
-        # Adjust posture visually
-        box_color = (52, 152, 219)  # Blue
-        if current_action == "JUMP":
-            box_y -= 120
-            box_color = (241, 196, 15)  # Gold
-        elif current_action == "DUCK":
-            box_h = 80
-            box_y += 60
-            box_color = (155, 89, 182)  # Purple
-        elif current_action == "LEAN_LEFT":
-            box_x -= 100
-        elif current_action == "LEAN_RIGHT":
-            box_x += 100
-
-        pygame.draw.rect(screen, box_color, (box_x, box_y, box_w, box_h), border_radius=12)
-
-        # Draw action text under avatar
-        font = pygame.font.Font(None, 36)
-        action_surf = font.render(f"ACTION: {current_action}", True, (255, 255, 255))
-        screen.blit(action_surf, (sw // 2 - action_surf.get_width() // 2, sh // 2 + 180))
-
-        # 4. Draw HUD & Menus (Module 4)
-        display.draw_hud(screen)
-        display.draw_menu(screen)
+        # Draw Menu Overlay if menu is active
+        if display.menu_title and runner.engine.state in (GameState.MENU, GameState.PAUSED):
+            display.draw_menu(screen)
 
         pygame.display.flip()
 
     display.close()
     audio.close()
-    log.info("--- Test loop finished cleanly ---")
+    log.info("--- Game loop finished cleanly ---")
 
 
 if __name__ == "__main__":
