@@ -43,6 +43,7 @@ kids_game/
 ├── tests
 │   ├── __init__.py
 │   ├── test_audio.py
+│   ├── test_camera_manager.py
 │   ├── test_config.py
 │   ├── test_display.py
 │   ├── test_event_bus.py
@@ -55,6 +56,9 @@ kids_game/
 ├── tools
 │   ├── show_tree.py
 │   └── update_git_commits.py
+├── vision
+│   ├── __init__.py
+│   └── camera_manager.py
 ├── .gitignore
 ├── config.json
 ├── main.py

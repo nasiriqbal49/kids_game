@@ -2,8 +2,8 @@
 
 **Last Updated:** 2026-10-29
 **Current Milestone Target:** Milestone M2 (Body Control & Vision Tracking)
-**Current Phase:** Phase B complete (Milestone M1 achieved); Phase C in preparation
-**Verified unit tests (from real output):** 113 run, 113 passing (verified 2026-10-29) (`python -m unittest discover -s tests -t .`)
+**Current Phase:** Phase B complete (Milestone M1 achieved); Phase C in progress (Module 9 complete)
+**Verified unit tests (from real output):** 125 run, 125 passing (verified 2026-10-29) (`python -m unittest discover -s tests -t . -v`)
 
 > **Rule for this file:** a use case is "Pass" only if a test carrying its ID exists, runs, and passed in output pasted by the owner. A module is DONE only when every P1 and P2 use case has a passing test; any deferred use case is listed explicitly below. See `docs/AI_START_HERE.md`.
 
@@ -19,8 +19,8 @@
 | **6** | **Game Engine Core** | **B** | **12** | **DONE (06.12 deferred, P3)** | 2026-10-28 | 11 tests. Fixed timestep loop (06.07), state machine transitions & legal table (06.01, 06.02), parent pause & zone auto-pause (06.03, 06.04), zero health game over (06.05), difficulty ramp (06.06), error boundary (06.08), idle timeout (06.09), quit mid-game (06.10), reset (06.11). 06.12 session reminder deferred (P3). |
 | **7** | **Game Mechanics Library** | **B** | **15** | **DONE** | 2026-10-28 | 15 tests. Cleared by jump/duck/lean (07.01, 07.05, 07.14), damage & 1.0s invulnerability (07.02, 07.03), timing feedback & forgiving hitboxes (07.04), powerup expiration & refresh (07.06, 07.07), shield absorb (07.08), health refill bonus points (07.09), minimum spawn spacing (07.10), streak reset on hit (07.11), airborne high-bar collision (07.12), slow_down speed scale (07.13), lane barrier collision (07.14), off-screen pruning for flat memory (07.15). |
 | **8** | **Game 1: Runner** | **B** | **9** | **DONE (08.07, 08.09 deferred)** | 2026-10-29 | **MILESTONE M1 ACHIEVED**. 7 tests. Full 3-lane perspective runner with jump air-time lockout (08.03), idle player damage & game over (08.02), personal best tracking (08.04), difficulty presets & speed cap (08.05, 08.06), and results screen (08.08). 08.07 tutorial deferred to Phase D profiles; 08.09 camera play deferred to Phase C. |
-| 9 | Camera Manager | C | 14 | UP NEXT | - | OpenCV frame acquisition thread, camera reconnect & resolution scaling. |
-| 10 | Debug & Replay Tools | C | 9 | PENDING | - | Landmark recorder and visual overlay. |
+| **9** | **Camera Manager** | **C** | **14** | **DONE (09.11, 09.13 deferred)** | 2026-10-29 | 12 tests. OpenCV background capture thread (09.01, 09.09), camera lost/disconnected (09.02, 09.03), auto-reconnect retry loop (09.04), busy camera reporting (09.05), stale frame detection (09.06), hardware discovery & picker (09.07), low FPS auto-downscale (09.08), secondary camera throttling (09.10), horizontal mirroring (09.12), clean shutdown (09.14). 09.11 OS permissions & 09.13 auto-exposure deferred. |
+| 10 | Debug & Replay Tools | C | 9 | UP NEXT | - | Landmark recorder, replay engine, and live visual overlay. |
 | 11 | Pose Tracker | C | 12 | PENDING | - | MediaPipe body tracking at 30 FPS. |
 | 12 | Zone & Calibration | C | 12 | PENDING | - | Tile boundaries & floor scale. |
 | 13 | Player Lock | C | 11 | PENDING | - | Target child lock-on, ignores siblings. |
@@ -48,7 +48,8 @@
 | `tests/test_game_engine.py` | 11 |
 | `tests/test_mechanics.py` | 15 |
 | `tests/test_game_runner.py` | 7 |
-| **Total** | **113** |
+| `tests/test_camera_manager.py` | 12 |
+| **Total** | **125** |
 
 ---
 
@@ -177,6 +178,24 @@
   - `08.07` First-time tutorial: **Deferred to Phase D (Profiles)**
   - `08.08` Results screen renders stats summary (score, best, cleared, streak): **Pass** (`test_08_08`)
   - `08.09` Camera vs keyboard: **Deferred to Phase C (Vision Tracking)**
+
+### Module 9: Camera Manager
+- **Files:** `vision/__init__.py`, `vision/camera_manager.py`, `tests/test_camera_manager.py` (12 tests)
+- **Use cases verified:**
+  - `09.01` Open webcam at configured resolution and FPS; stream timestamped frames in background thread: **Pass** (`test_09_01`)
+  - `09.02` Invalid or missing camera index dispatches CAMERA_LOST and flags unavailable: **Pass** (`test_09_02`)
+  - `09.03` Unplugged camera mid-stream dispatches CAMERA_LOST: **Pass** (`test_09_03`)
+  - `09.04` Auto-reconnect retry loop recovers stream upon reconnection: **Pass** (`test_09_04`)
+  - `09.05` Camera in use / busy reports clear status: **Pass** (`test_09_05`)
+  - `09.06` Stale frame detection flags frozen camera streams: **Pass** (`test_09_06`)
+  - `09.07` Hardware discovery helper `list_available_cameras` probes connected devices: **Pass** (`test_09_07`)
+  - `09.08` Low FPS detection fires CAMERA_LOW_FPS and automatically downscales resolution: **Pass** (`test_09_08`)
+  - `09.09` Multiple cameras (front and side) run concurrently in independent threads: **Pass** (`test_09_09`)
+  - `09.10` Bandwidth prioritization throttles secondary camera to protect primary front tracking: **Pass** (`test_09_10`)
+  - `09.11` OS permissions check: **Deferred (P2)**
+  - `09.12` Horizontal frame mirroring applies correctly: **Pass** (`test_09_12`)
+  - `09.13` Auto-exposure / focus locking: **Deferred (P3)**
+  - `09.14` Clean shutdown releases devices and joins background threads: **Pass** (`test_09_14`)
 
 ---
 

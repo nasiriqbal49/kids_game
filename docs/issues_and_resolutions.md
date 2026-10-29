@@ -152,3 +152,21 @@ This document tracks every error, edge-case hurdle, or design correction encount
 - **Root Cause:** `check_obstacle_interaction()` in `manager.py` only checked player posture action (jump/duck) without checking if `player_lane == obstacle.lane`. An accidental duplicate damage deduction line also subtracted damage twice.
 - **Resolution:** Added a lane comparison check so obstacles in other lanes are safely bypassed (`is_cleared = True`); consolidated damage deduction to single application using `self.damage_per_hit = 20`. All 113 unit tests verified.
 - **Status:** **Resolved & Verified**
+
+---
+
+### Issue #018: Parameter name typo in `CameraManager.add_camera()`
+- **Module:** Module 9 (Camera Manager)
+- **Symptom:** `NameError: name 'fps' is not defined` when initializing cameras.
+- **Root Cause:** In `vision/camera_manager.py`, parameter was named `target_fps` but passed to `CameraDevice` constructor as `target_fps=fps`.
+- **Resolution:** Replaced `target_fps=fps` with `target_fps=target_fps`. Verified with all unit tests.
+- **Status:** **Resolved & Verified**
+
+---
+
+### Issue #019: Horizontal mirror test coordinate calculation on dynamic camera resolution
+- **Module:** Module 9 (Camera Manager tests, UC 09.12)
+- **Symptom:** `AssertionError: np.uint64(0) not greater than 0` in `test_09_12_horizontal_mirroring`.
+- **Root Cause:** Test checked x=70..90 assuming width 100, but `CameraManager` configured the capture device to target width 640. Mirrored marker moved from x=10..30 to x=610..630.
+- **Resolution:** Updated test to calculate mirrored coordinates dynamically from `frame.width - 30` to `frame.width - 10`. Verified.
+- **Status:** **Resolved & Verified**

@@ -544,3 +544,17 @@ Foundation first so nothing is hard-coded. Then a full game with the keyboard, s
      - Validates distance from the TV (9–10 ft recommended) to verify full-body framing before starting.
 - **Why:** Ensures the game can run anywhere on any laptop and with any combination of phones/webcams without code changes.
 - **Approved by:** Nasir (Owner).
+
+### 2026-10-29: Virtual Coin Shop, Homemade Asset Studio & Parent Workshop UI
+- **What changed:**
+  1. **Virtual Currency & Pre-Game Shop (Phase D Enhancement to FR-A5 / Module 15):**
+     - Profiles store virtual in-game coins/stars earned from runs or granted by the parent.
+     - A pre-game Shop in the main menu allows players to purchase consumable power-ups into their universal profile inventory (usable across all games) with an equipped carrying capacity limit.
+  2. **Parent Workshop & Asset Customization Studio (Phase D Enhancement to FR-E4 / Module 15):**
+     - A single-page Parent Workshop screen accessible from the menu:
+       - Adjust player wallet balances.
+       - Customize shop catalog: item names, prices, and custom image paths (supporting homemade child art/photos).
+       - Customize obstacle/monster visuals, names, and sound effect bindings.
+       - Custom audio mapping for actions (jumps, ducks, pickups, hits).
+- **Why:** Delivers personal, family-made creative immersion and rewards kids with an engaging progression loop.
+- **Approved by:** Nasir (Owner).

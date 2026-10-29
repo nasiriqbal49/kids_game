@@ -39,23 +39,18 @@
 
 ### Current State (2026-10-29)
 - **Phase A (Foundation) certified:** Modules 1, 2, 3 (43 tests).
-- **Phase B (Playable Game with Keyboard) COMPLETE (Milestone M1 Achieved):**
-  - **Module 4 (Display and UI):** 30 tests (24 display + 6 pump).
-  - **Module 5 (Audio Manager):** 7 tests.
-  - **Module 6 (Game Engine Core):** 11 tests.
-  - **Module 7 (Game Mechanics Library):** 15 tests.
-  - **Module 8 (Game 1: Runner):** 7 tests.
-  - **Interactive Runner (`main.py`):** Fully playable 3-lane pseudo-3D perspective game at 60 FPS with jump arc, crouch duck, lane shifting, procedural sound effects, HUD, obstacles, collectibles, speed ramping, and results screen.
-- **Total Test Suite:** **113 verified passing unit tests** across 10 test files (`python -m unittest discover -s tests -t . -v`).
-- **Milestone Reached:** **Milestone M1 (Keyboard Runner)** certified.
+- **Phase B (Playable Game with Keyboard) COMPLETE (Milestone M1 Achieved):** Modules 4, 5, 6, 7, 8 (70 tests).
+- **Phase C (Computer Vision & Tracking) in progress:**
+  - **Module 9 (Camera Manager) COMPLETE:** 12 tests (`tests/test_camera_manager.py`). Background acquisition thread (09.01, 09.09), camera disconnect & reconnect retry loop (09.02, 09.03, 09.04), busy camera reporting (09.05), stale frame detection (09.06), hardware device discovery & picker (09.07), low FPS detection & auto-downscale (09.08), secondary camera throttling under bandwidth pressure (09.10), horizontal mirroring (09.12), clean shutdown (09.14). 09.11 OS permissions & 09.13 auto-exposure deferred.
+- **Total Test Suite:** **125 verified passing unit tests** across 11 test files (`python -m unittest discover -s tests -t . -v`).
+- **Dependencies:** `pygame==2.6.1`, `opencv-python>=4.8.0`, `numpy>=2.0.0`.
 
 ### Next Immediate Step
-- **Begin Phase C: Computer Vision & Tracking**:
-  - **Module 9: Camera Manager** in `vision/camera_manager.py`:
-    - List cameras and map roles (laptop webcam first, phones later) (09.01, 09.07).
-    - Acquire timestamped frames in background thread at target FPS (09.01, 09.09).
-    - Camera disconnect detection & reconnect retry loop (09.03, 09.04).
-    - Fallback to keyboard mode on camera lost (09.02).
+- **Begin Module 10: Debug and Replay Tools** in `vision/debug_tools.py`:
+  - Visual overlay view showing camera frame, skeleton, zone outline, and live signals (10.01).
+  - Landmark session recording to local JSON without saving raw video (privacy-first, 10.02).
+  - Replay system feeding recorded sessions back through tracking chain deterministically (10.03).
+  - Satisfy use cases 10.01 to 10.07.
 
 ### Known open items
 See "Known gaps and open items" in `docs/progress_tracker.md` (G1, G2, G4, G5, G6 open).
