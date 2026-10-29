@@ -39,6 +39,9 @@ kids_game/
 │   ├── display.py
 │   ├── event_pump.py
 │   └── game_engine.py
+├── identity
+│   ├── __init__.py
+│   └── profile_manager.py
 ├── logs
 │   └── kidsgame.log
 ├── tests
@@ -58,6 +61,7 @@ kids_game/
 │   ├── test_mechanics.py
 │   ├── test_player_lock.py
 │   ├── test_pose_tracker.py
+│   ├── test_profile_manager.py
 │   └── test_zone_calibration.py
 ├── tools
 │   ├── extract_module.py
@@ -76,7 +80,9 @@ kids_game/
 ├── .gitingestignore
 ├── config.json
 ├── main.py
-└── requirements.txt
+├── module_10_spec.md
+├── requirements.txt
+└── session_diff.txt
 ```
 
 ---

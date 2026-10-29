@@ -52,6 +52,12 @@
   - **Milestone M1:** Playable Keyboard Runner certified.
   - **Milestone M2:** Body Control Action Tracking certified.
 
+Certified: Module 15 (Profile Manager) with 10 verified tests. Total: 172 passing tests.
+
+Current phase: Phase D.
+
+Next step: Live camera integration into main.py (Choice A) OR Module 16 Measurement Capture (Choice B).
+
 ### Next Immediate Step (When resuming at home)
 - **Option A (Live Camera Test):** Wire the vision pipeline into `main.py` to play the runner live using real body movements in front of the webcam.
 - **Option B (Phase D: Profiles):** Begin **Module 15: Profile Manager** in `identity/profile_manager.py` (profiles, virtual coin shop, avatar customization, rolling backups).

@@ -7,6 +7,19 @@
 
 ---
 
+## [2026-10-29 20:30] Session: `gemini-nasir-2026-10-29-m15`
+- **Author:** Gemini-Nasir
+- **Git Tag:** `gemini-nasir-2026-10-29-m15`
+- **Modules Covered:** Module 15 (Profile Manager & Virtual Coin Shop)
+- **Verified Unit Tests:** 172 passing tests (`python -m unittest discover -s tests -t . -v`)
+- **What Changed:**
+  - **Code:**
+    - Completed `identity/profile_manager.py` (PlayerProfile dataclass, duplicate name protection, profile selection with EventBus broadcasting, rolling .bak corruption recovery, per-game high scores, avatar customization, parent-confirmed deletion, re-measurement score preservation, guest mode, disk write fail-soft, and coin wallet helpers).
+    - Created `tests/test_profile_manager.py` (10 verified unit tests for UC 15.01 to 15.10).
+  - **Documentation & Rules:**
+    - Appended Change Log to `docs/full_game_plan.md` for standalone `.exe` packaging architecture, protected `user_data/` directory separation, and the 11 comedic mechanics (punch/kick, fart blast, emotion monsters, photo-finish snapshot, chicken flap, giant stomp, flamingo balance, tickle swatter, family photobomb).
+    - Certified Module 15 in `docs/progress_tracker.md` and `docs/master_ai_handoff.md`.
+
 ## [2026-10-29 14:00] Session: `gemini-nasir-2026-10-29-m2`
 - **Author:** Gemini-Nasir
 - **Git Tag:** `gemini-nasir-2026-10-29-m2`

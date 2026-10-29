@@ -558,3 +558,20 @@ Foundation first so nothing is hard-coded. Then a full game with the keyboard, s
        - Custom audio mapping for actions (jumps, ducks, pickups, hits).
 - **Why:** Delivers personal, family-made creative immersion and rewards kids with an engaging progression loop.
 - **Approved by:** Nasir (Owner).
+
+### 2026-10-29: Standalone .exe Packaging, Protected user_data/ Directory & Comedic Mechanics
+- **What changed:**
+  1. **Deployment Architecture:** Game bundles into standalone `KidsMotionGame.exe` via PyInstaller (`tools/build_exe.py`) for computers without Python/VS Code, plus a 1-click desktop batch launcher for the local ThinkPad.
+  2. **Protected User Data Separation:** All player profiles, coin balances, custom asset uploads, and shop settings live in a separate `user_data/` folder outside the `.exe` that is never overwritten by software updates.
+  3. **11 Approved Comedic Mechanics:**
+     - Punch & Kick (air punches/kicks smash soft blocks; hard hurdles require jump/duck).
+     - Fart Blast Pose (sideways hip tilt/bend + cartoon green cloud & sound repels certain roadblock monsters).
+     - Emotion Matching Monsters (thought bubble emoji with smile/laugh, angry, cry, surprise + monster reaction cheering vs pouting).
+     - Photo-Finish Funny Snapshot (camera freeze-frame on results screen + cartoon stickers).
+     - Chicken Flap (elbow flapping glide power-up + clucking sound).
+     - Giant Monster Stomp (screen shake + roar + crushes obstacles).
+     - Flamingo Balance (rainbow zone + balance on one foot for 2s + 50 coins).
+     - Tickle Swatter (screen-sticking goofy monster tickled away by rapid hand waving).
+     - Family Photobomb Easter Egg (friendly guest star coin bonus).
+- **Why:** Delivers clean commercial deployment and maximum family physical comedy.
+- **Approved by:** Nasir (Owner).
