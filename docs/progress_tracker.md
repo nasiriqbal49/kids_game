@@ -1,9 +1,9 @@
 # Kids Motion Game - Development & Use-Case Progress Tracker
 
 **Last Updated:** 2026-10-29
-**Current Milestone Target:** Milestone M2 (Body Control & Vision Tracking)
-**Current Phase:** Phase B complete (Milestone M1 achieved); Phase C in progress (Module 9 complete)
-**Verified unit tests (from real output):** 125 run, 125 passing (verified 2026-10-29) (`python -m unittest discover -s tests -t . -v`)
+**Current Milestone Target:** Milestone M3 (Profiles & Measurement Capture)
+**Current Phase:** Phase C complete (Milestone M2 achieved); Phase D in preparation
+**Verified unit tests (from real output):** 162 run, 162 passing (verified 2026-10-29) (`python -m unittest discover -s tests -t . -v`)
 
 > **Rule for this file:** a use case is "Pass" only if a test carrying its ID exists, runs, and passed in output pasted by the owner. A module is DONE only when every P1 and P2 use case has a passing test; any deferred use case is listed explicitly below. See `docs/AI_START_HERE.md`.
 
@@ -20,12 +20,12 @@
 | **7** | **Game Mechanics Library** | **B** | **15** | **DONE** | 2026-10-28 | 15 tests. Cleared by jump/duck/lean (07.01, 07.05, 07.14), damage & 1.0s invulnerability (07.02, 07.03), timing feedback & forgiving hitboxes (07.04), powerup expiration & refresh (07.06, 07.07), shield absorb (07.08), health refill bonus points (07.09), minimum spawn spacing (07.10), streak reset on hit (07.11), airborne high-bar collision (07.12), slow_down speed scale (07.13), lane barrier collision (07.14), off-screen pruning for flat memory (07.15). |
 | **8** | **Game 1: Runner** | **B** | **9** | **DONE (08.07, 08.09 deferred)** | 2026-10-29 | **MILESTONE M1 ACHIEVED**. 7 tests. Full 3-lane perspective runner with jump air-time lockout (08.03), idle player damage & game over (08.02), personal best tracking (08.04), difficulty presets & speed cap (08.05, 08.06), and results screen (08.08). 08.07 tutorial deferred to Phase D profiles; 08.09 camera play deferred to Phase C. |
 | **9** | **Camera Manager** | **C** | **14** | **DONE (09.11, 09.13 deferred)** | 2026-10-29 | 12 tests. OpenCV background capture thread (09.01, 09.09), camera lost/disconnected (09.02, 09.03), auto-reconnect retry loop (09.04), busy camera reporting (09.05), stale frame detection (09.06), hardware discovery & picker (09.07), low FPS auto-downscale (09.08), secondary camera throttling (09.10), horizontal mirroring (09.12), clean shutdown (09.14). 09.11 OS permissions & 09.13 auto-exposure deferred. |
-| 10 | Debug & Replay Tools | C | 9 | UP NEXT | - | Landmark recorder, replay engine, and live visual overlay. |
-| 11 | Pose Tracker | C | 12 | PENDING | - | MediaPipe body tracking at 30 FPS. |
-| 12 | Zone & Calibration | C | 12 | PENDING | - | Tile boundaries & floor scale. |
-| 13 | Player Lock | C | 11 | PENDING | - | Target child lock-on, ignores siblings. |
-| 14 | Action Detector | C | 17 | PENDING | - | Jump/Duck/Lean detection (Milestone M2). |
-| 15 | Profile Manager | D | 13 | PENDING | - | Local JSON child profiles and stats. |
+| **10** | **Debug & Replay Tools** | **C** | **9** | **DONE (10.08 deferred, P3)** | 2026-10-29 | 8 tests. Diagnostic overlay (10.01), JSON landmark recorder (10.02), deterministic replayer (10.03), threshold comparison summary (10.04), ground-truth jump scoring (10.05), low disk guard (10.06), corrupt file rejection (10.07), recording file cleanup (10.09). 10.08 raw video deferred. |
+| **11** | **Pose Tracker** | **C** | **12** | **DONE (11.04, 11.09, 11.10, 11.12 deferred)** | 2026-10-29 | 8 tests. MediaPipe body tracking at 20-30 FPS (11.01), empty frames player lost (11.02), cut-off limbs partial check (11.03), fail-soft fallback (11.05), low light warning (11.06), 150ms motion blur holdover (11.07), child scale check (11.08), joint mapping (11.11). |
+| **12** | **Zone and Calibration** | **C** | **12** | **DONE (12.02, 12.06, 12.07, 12.11, 12.12 deferred)** | 2026-10-29 | 6 tests. Inside zone (12.03), edge warning band (12.04), foot-based out of zone event (12.05), jump vertical immunity (12.08), upper body lean uses feet (12.09), JSON calibration persistence by role (12.01, 12.10). |
+| **13** | **Player Lock** | **C** | **11** | **DONE (13.07, 13.09-13.11 deferred)** | 2026-10-29 | 6 tests. 0.5s stable presence lock (13.01), nearest-to-center multi-kid lock (13.02), bystander rejection (13.03), 2.0s occlusion grace (13.04, 13.05), jump out of frame retention (13.06), body proportions swap prevention (13.08). |
+| **14** | **Action Detector** | **C** | **17** | **DONE (14.04, 14.09, 14.11, 14.12, 14.15-14.17 deferred)** | 2026-10-29 | **MILESTONE M2 ACHIEVED**. 9 tests. JUMP and LAND pairs (14.01), bounce ignored (14.02), slow walk ignored (14.03), land between quick jumps (14.05), DUCK and STAND on rise (14.06), LEAN left/right/center with hysteresis (14.07), loss resets neutral posture (14.08), hands up does not jump (14.13), 5.0s stuck duck auto-reset (14.14). |
+| 15 | Profile Manager | D | 13 | UP NEXT | - | Player profiles, virtual coin shop, avatar customization, rolling backup. |
 | 16 | Measurement Capture | D | 12 | PENDING | - | Calibration routine (Milestone M3). |
 | 17 | Phone Cameras Integration | E | 12 | PENDING | - | Dual phone cameras via USB (Milestone M4). |
 | 18 | Games 2 and 3 | E | 9 | PENDING | - | Lane switch & freeze dance (Milestone M5). |
@@ -49,7 +49,12 @@
 | `tests/test_mechanics.py` | 15 |
 | `tests/test_game_runner.py` | 7 |
 | `tests/test_camera_manager.py` | 12 |
-| **Total** | **125** |
+| `tests/test_debug_tools.py` | 8 |
+| `tests/test_pose_tracker.py` | 8 |
+| `tests/test_zone_calibration.py` | 6 |
+| `tests/test_player_lock.py` | 6 |
+| `tests/test_action_detector.py` | 9 |
+| **Total** | **162** |
 
 ---
 
@@ -196,6 +201,23 @@
   - `09.12` Horizontal frame mirroring applies correctly: **Pass** (`test_09_12`)
   - `09.13` Auto-exposure / focus locking: **Deferred (P3)**
   - `09.14` Clean shutdown releases devices and joins background threads: **Pass** (`test_09_14`)
+
+
+### Module 11: Pose Tracker
+- **Files:** `vision/pose_tracker.py`, `tests/test_pose_tracker.py` (8 tests)
+- **Use cases verified:** 11.01, 11.02, 11.03, 11.05, 11.06, 11.07, 11.08, 11.11.
+
+### Module 12: Zone and Calibration
+- **Files:** `vision/zone_calibration.py`, `tests/test_zone_calibration.py` (6 tests)
+- **Use cases verified:** 12.01, 12.03, 12.04, 12.05, 12.08, 12.09, 12.10.
+
+### Module 13: Player Lock
+- **Files:** `vision/player_lock.py`, `tests/test_player_lock.py` (6 tests)
+- **Use cases verified:** 13.01, 13.02, 13.03, 13.04, 13.05, 13.06, 13.08.
+
+### Module 14: Action Detector (Milestone M2)
+- **Files:** `vision/action_detector.py`, `tests/test_action_detector.py` (9 tests)
+- **Use cases verified:** 14.01, 14.02, 14.03, 14.05, 14.06, 14.07, 14.08, 14.13, 14.14.
 
 ---
 
