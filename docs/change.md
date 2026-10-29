@@ -7,6 +7,23 @@
 
 ---
 
+## [2026-10-29 21:15] Session: `gemini-nasir-2026-10-29-m3`
+- **Author:** Gemini-Nasir
+- **Git Tag:** `gemini-nasir-2026-10-29-m3`
+- **Milestone Reached:** **MILESTONE M3: PROFILES & MEASUREMENT CAPTURE CERTIFIED**
+- **Modules Covered:** Module 15 (Profile Manager) & Module 16 (Measurement Capture) — Phase D Complete
+- **Verified Unit Tests:** 181 passing tests (`python -m unittest discover -s tests -t . -v`)
+- **What Changed:**
+  - **Code:**
+    - Completed `identity/profile_manager.py` (PlayerProfile dataclass, duplicate name protection, profile selection with EventBus broadcasting, rolling .bak corruption recovery, per-game high scores, avatar customization, parent-confirmed deletion, re-measurement score preservation, guest mode, disk write fail-soft, and coin wallet helpers).
+    - Completed `identity/measurement_capture.py` (Guided superhero calibration state machine, 2.0s stability filter, full-body framing guard, test jump apex tracking, implausible height rejection, and parent manual entry fallback).
+    - Created `tests/test_profile_manager.py` (10 verified unit tests for UC 15.01 to 15.10).
+    - Created `tests/test_measurement_capture.py` (9 verified unit tests for UC 16.01 to 16.09).
+  - **Documentation & Logging:**
+    - Appended Issue #022 to `docs/issues_and_resolutions.md`.
+    - Certified Modules 15 and 16 in `docs/progress_tracker.md` and `docs/master_ai_handoff.md`.
+
+
 ## [2026-10-29 20:30] Session: `gemini-nasir-2026-10-29-m15`
 - **Author:** Gemini-Nasir
 - **Git Tag:** `gemini-nasir-2026-10-29-m15`

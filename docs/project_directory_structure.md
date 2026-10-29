@@ -41,6 +41,7 @@ kids_game/
 │   └── game_engine.py
 ├── identity
 │   ├── __init__.py
+│   ├── measurement_capture.py
 │   └── profile_manager.py
 ├── logs
 │   └── kidsgame.log
@@ -58,6 +59,7 @@ kids_game/
 │   ├── test_game_runner.py
 │   ├── test_input_keyboard.py
 │   ├── test_logger.py
+│   ├── test_measurement_capture.py
 │   ├── test_mechanics.py
 │   ├── test_player_lock.py
 │   ├── test_pose_tracker.py

@@ -170,3 +170,10 @@ This document tracks every error, edge-case hurdle, or design correction encount
 - **Root Cause:** Test checked x=70..90 assuming width 100, but `CameraManager` configured the capture device to target width 640. Mirrored marker moved from x=10..30 to x=610..630.
 - **Resolution:** Updated test to calculate mirrored coordinates dynamically from `frame.width - 30` to `frame.width - 10`. Verified.
 - **Status:** **Resolved & Verified**
+
+### Issue #022: Test 16.06 frame loop overshooting and overwriting rejection feedback
+- **Module:** Module 16 (Measurement Capture tests, UC 16.06)
+- **Symptom:** `AssertionError: 'failed' not found in 'hold still! 2...'` in `test_16_06_implausible_height_rejected_and_retried`.
+- **Root Cause:** The test loop fed 5 frames of 0.5s (2.5s total). The hold completed on frame 4 (2.0s) and correctly emitted `"Height check failed"`, but frame 5 immediately started the retry countdown, overwriting the `feedback` variable.
+- **Resolution:** Adjusted the test to feed exactly 4 frames of 0.5s so the 4th frame captures the rejection feedback. All 9 tests pass.
+- **Status:** **Resolved & Verified**

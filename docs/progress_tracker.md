@@ -219,6 +219,20 @@
 - **Files:** `vision/action_detector.py`, `tests/test_action_detector.py` (9 tests)
 - **Use cases verified:** 14.01, 14.02, 14.03, 14.05, 14.06, 14.07, 14.08, 14.13, 14.14.
 
+### Module 16: Measurement Capture (Milestone M3)
+- **Files:** `identity/measurement_capture.py`, `tests/test_measurement_capture.py` (9 tests)
+- **Use cases verified:**
+  - `16.01` Guided superhero still pose capture saves height and baseline to profile: **Pass** (`test_16_01`)
+  - `16.02` Partial body framing instructs child to step back: **Pass** (`test_16_02`)
+  - `16.03` Fidgeting or movement during hold resets 2.0s timer: **Pass** (`test_16_03`)
+  - `16.04` 3 failed hold attempts triggers manual fallback entry: **Pass** (`test_16_04`)
+  - `16.05` Child walking away for 3s cancels session and saves nothing: **Pass** (`test_16_05`)
+  - `16.06` Implausible height (< 80cm or > 190cm) rejected and retried: **Pass** (`test_16_06`)
+  - `16.07` Arms pinned to sides prompts child to spread arms wide: **Pass** (`test_16_07`)
+  - `16.08` Test jump tracks personal apex rise and sets jump threshold: **Pass** (`test_16_08`)
+  - `16.09` Parent manual real height entry stores calibrated measurements: **Pass** (`test_16_09`)
+
+
 ---
 
 ## Known gaps and open items

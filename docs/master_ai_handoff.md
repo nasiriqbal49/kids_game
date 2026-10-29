@@ -58,6 +58,13 @@ Current phase: Phase D.
 
 Next step: Live camera integration into main.py (Choice A) OR Module 16 Measurement Capture (Choice B).
 
+Update Section 4: Certify Phase D (Modules 15 and 16 complete). Total test suite: 181 verified passing unit tests.
+
+State Milestone M3 achieved.
+
+Set Next Immediate Step: Wire the live camera pipeline into main.py for live webcam play with Nasir's child!
+
+
 ### Next Immediate Step (When resuming at home)
 - **Option A (Live Camera Test):** Wire the vision pipeline into `main.py` to play the runner live using real body movements in front of the webcam.
 - **Option B (Phase D: Profiles):** Begin **Module 15: Profile Manager** in `identity/profile_manager.py` (profiles, virtual coin shop, avatar customization, rolling backups).
