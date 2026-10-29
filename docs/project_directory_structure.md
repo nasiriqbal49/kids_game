@@ -61,6 +61,7 @@ kids_game/
 │   └── camera_manager.py
 ├── .gitignore
 ├── config.json
+├── gitingestignore.py
 ├── main.py
 └── requirements.txt
 ```
