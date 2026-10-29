@@ -129,15 +129,23 @@ class TestCameraManager(unittest.TestCase):
         device = mgr.devices["front"]
         device._reconnect_interval_sec = 0.05
 
+        # Simulate disconnect and poll until thread registers it
         fake_cap.fail_reads = True
-        time.sleep(0.06)
+        for _ in range(20):
+            if not device.is_connected:
+                break
+            time.sleep(0.01)
         self.assertFalse(device.is_connected)
 
+        # Device is plugged back in, poll until reconnected
         fake_cap.fail_reads = False
         fake_cap._is_open = True
-        time.sleep(0.12)
-        self.bus.drain()
+        for _ in range(25):
+            if device.is_connected:
+                break
+            time.sleep(0.01)
 
+        self.bus.drain()
         self.assertTrue(device.is_connected)
         mgr.close()
 
