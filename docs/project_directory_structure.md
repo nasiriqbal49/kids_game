@@ -17,6 +17,7 @@ kids_game/
 │   └── logger.py
 ├── docs
 │   ├── AI_START_HERE.md
+│   ├── change.md
 │   ├── event_contracts.md
 │   ├── full_game_plan.md
 │   ├── git_commits.md
@@ -54,14 +55,16 @@ kids_game/
 │   ├── test_logger.py
 │   └── test_mechanics.py
 ├── tools
+│   ├── extract_module.py
+│   ├── make_session_diff.py
 │   ├── show_tree.py
 │   └── update_git_commits.py
 ├── vision
 │   ├── __init__.py
 │   └── camera_manager.py
 ├── .gitignore
+├── .gitingestignore
 ├── config.json
-├── gitingestignore.py
 ├── main.py
 └── requirements.txt
 ```

@@ -143,3 +143,15 @@ Lessons from independent reviews (apply them every time):
 - Do not write code that touches hardware (cameras, display) without a keyboard or fake-input fallback.
 - Do not give instructions for macOS/Linux; the owner is on Windows 11 PowerShell.
 - Do not assume you can access the private GitHub repo.
+
+---
+
+## 11. Multi-AI Coordination Protocol (Claude, Gemini-Nasir, Gemini-Sidra)
+
+To keep sessions ultra-fast and avoid wasting tokens on massive 95K-token exports:
+
+1. **Tag every session:**
+   At the end of every session, create a Git tag:
+   ```powershell
+   git tag <author>-YYYY-MM-DD-session<N>
+   git push --tags
