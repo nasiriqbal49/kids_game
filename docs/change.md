@@ -7,6 +7,38 @@
 
 ---
 
+## [2026-10-30 10:30] Session: `gemini-nasir-2026-10-30-m4`
+- **Author:** Gemini-Nasir
+- **Git Tag:** `gemini-nasir-2026-10-30-m4`
+- **Milestones Reached:** 
+  - **MILESTONE M3: PROFILES & MEASUREMENT CAPTURE CERTIFIED**
+  - **MILESTONE M4: PHONE CAMERAS & FALLBACK CHAIN CERTIFIED**
+  - **LIVE BODY CONTROL PLAYTEST VERIFIED WITH NASIR'S CHILD ON 43" TV**
+- **Modules Covered:** Module 15 (Profile Manager), Module 16 (Measurement Capture), Module 17 (Phone Cameras Integration & Fallback Chain).
+- **Verified Unit Tests:** 186 passing tests (`python -m unittest discover -s tests -t . -v`).
+- **What Changed:**
+  - **Live Game Playtest:**
+    - Connected Xiaomi Poco X6 Pro via USB as high-res 30 FPS camera; verified live JUMP, DUCK, and LEAN control with Nasir's child on the 43" TV.
+    - Pinned `mediapipe==0.10.14` to restore full 33-point pose landmark tracking on Python 3.12.
+    - Solved the pre-jump crouch trap in `vision/action_detector.py`: added explosive spring detection and ankle-lift tracking so child crouch-jumps trigger instantly.
+    - Set `jump_refractory_sec = 0.45` to eliminate double-jump triggers during air-time.
+    - Expanded TV 3D road view from 60% to 86% of the screen by moving horizon to top 14%, removing the giant empty sky.
+    - Added bottom-left live webcam picture-in-picture with anchored green skeleton dots and real-time Action/Rise indicator badge.
+  - **Code (Modules 15, 16, 17):**
+    - Completed `identity/profile_manager.py` (Profiles, atomic save, rolling .bak recovery, per-game high scores, coins, avatar).
+    - Completed `identity/measurement_capture.py` (Superhero pose calibration, stability filter, jump apex tracking, manual fallback).
+    - Completed `vision/camera_supervisor.py` (Automatic Fallback Chain: Phone -> Laptop Webcam -> Keyboard, hot-plug recovery, orientation lock).
+    - Created unit test suites `test_profile_manager.py` (10 tests), `test_measurement_capture.py` (9 tests), and `test_camera_supervisor.py` (5 tests).
+  - **Peer Review Notes for Incoming AI:**
+    - Test suite has 186 passing tests in ~7 seconds.
+    - Camera supervisor handles phone disconnections smoothly.
+- **Next Immediate Step:**
+  - Wire `CameraSupervisor` into `main.py` so hot-plugging the Poco phone or unplugging it auto-switches live between phone, laptop webcam, and keyboard.
+  - Begin **Module 18: Games 2 and 3 (Lane Switch & Freeze Dance / Lava)** or Virtual Coin Shop UI.
+
+---
+
+
 ## [2026-10-29 21:15] Session: `gemini-nasir-2026-10-29-m3`
 - **Author:** Gemini-Nasir
 - **Git Tag:** `gemini-nasir-2026-10-29-m3`

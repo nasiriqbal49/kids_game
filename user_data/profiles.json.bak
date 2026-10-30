@@ -1,0 +1,21 @@
+{
+  "version": "1.0",
+  "saved_at": 1793337054.060006,
+  "profiles": [
+    {
+      "profile_id": "72ef69ce-021f-4da4-bd16-6468b1d9a0e5",
+      "name": "Champion",
+      "coins": 0,
+      "inventory": {},
+      "high_scores": {},
+      "avatar": {
+        "color": "blue",
+        "hat": "none",
+        "accessory": "none"
+      },
+      "measurements": {},
+      "created_at": 1793287581.6657267,
+      "last_played_at": 1793337054.060006
+    }
+  ]
+}

@@ -17,23 +17,23 @@ log = get_logger("runner")
 # Difficulty Presets (UC 08.05, 08.06)
 DIFFICULTY_PRESETS = {
     "easy": {
-        "base_speed": 0.6,          # Very gentle pace for kids
+        "base_speed": 0.6,
         "speed_cap": 1.2,
         "speed_ramp_rate": 0.008,
-        "damage_per_hit": 10,       # 10 hits before Game Over!
-        "spawn_interval": 2.5,      # 2.5s between obstacles
-        "powerup_chance": 0.35,     # 35% chance of helpful power-up
+        "damage_per_hit": 10,
+        "spawn_interval": 2.5,
+        "powerup_chance": 0.35,
     },
     "normal": {
-        "base_speed": 1.0,          # Standard speed
+        "base_speed": 1.0,
         "speed_cap": 2.0,
         "speed_ramp_rate": 0.02,
-        "damage_per_hit": 20,       # 5 hits before Game Over (test_08_02)
+        "damage_per_hit": 20,
         "spawn_interval": 2.0,
         "powerup_chance": 0.25,
     },
     "strict": {
-        "base_speed": 1.2,          # Fast baseline (test_08_05)
+        "base_speed": 1.2,
         "speed_cap": 2.5,
         "speed_ramp_rate": 0.03,
         "damage_per_hit": 25,
@@ -99,9 +99,16 @@ class RunnerGame:
 
     def _subscribe_events(self) -> None:
         """Subscribe to game events to keep state synced."""
+        self.bus.subscribe(EventType.JUMP, self._on_jump_action)
         self.bus.subscribe(EventType.GAME_OVER, self._on_game_over)
         self.bus.subscribe(EventType.OBSTACLE_CLEARED, self._on_obstacle_cleared)
         self.bus.subscribe(EventType.STREAK_CHANGED, self._on_streak_changed)
+
+    def _on_jump_action(self, event: Event) -> None:
+        """Triggers the avatar jump arc when JUMP fires from camera or keyboard."""
+        if not self.is_jumping and self.engine.state == GameState.PLAYING:
+            self.is_jumping = True
+            self.jump_timer = 0.0
 
     def _on_game_over(self, event: Event) -> None:
         """Records personal best and saves summary stats on Game Over (UC 08.04, 08.08)."""
@@ -150,7 +157,6 @@ class RunnerGame:
         self.jump_timer = 0.0
         self.results_selected_index = 0
 
-        # Pre-seed spawn timer so the first obstacle spawns immediately
         self.spawn_timer = self.spawn_interval
 
         self.engine.reset_game()
@@ -229,28 +235,33 @@ class RunnerGame:
         sw = surface.get_width()
         sh = surface.get_height()
 
-        # 1. Sky & Ground
-        surface.fill((20, 24, 38))
-        horizon_y = int(sh * 0.38)
-        pygame.draw.rect(surface, (30, 36, 52), (0, horizon_y, sw, sh - horizon_y))
+        # 1. Sleek Horizon at Top 14% (Expands game world to 86% of TV!)
+        horizon_y = int(sh * 0.14)
+        surface.fill((16, 20, 32))
+        pygame.draw.rect(surface, (28, 34, 48), (0, horizon_y, sw, sh - horizon_y))
 
-        # 2. 3-Lane Perspective Road
-        road_top_w = int(sw * 0.25)
-        road_bot_w = int(sw * 0.75)
+        # 2. 3-Lane Perspective Road (Wider & Full-Screen)
+        road_top_w = int(sw * 0.22)
+        road_bot_w = int(sw * 0.84)
         top_left = (sw // 2 - road_top_w // 2, horizon_y)
         top_right = (sw // 2 + road_top_w // 2, horizon_y)
         bot_right = (sw // 2 + road_bot_w // 2, sh)
         bot_left = (sw // 2 - road_bot_w // 2, sh)
 
         pygame.draw.polygon(surface, (45, 52, 70), [top_left, top_right, bot_right, bot_left])
-        pygame.draw.line(surface, (241, 196, 15), top_left, bot_left, 4)
-        pygame.draw.line(surface, (241, 196, 15), top_right, bot_right, 4)
+        pygame.draw.line(surface, (241, 196, 15), top_left, bot_left, 5)
+        pygame.draw.line(surface, (241, 196, 15), top_right, bot_right, 5)
 
         # Lane dividers
         for l_idx in (1, 2):
             tx = top_left[0] + (road_top_w * l_idx // 3)
             bx = bot_left[0] + (road_bot_w * l_idx // 3)
-            pygame.draw.line(surface, (120, 130, 150), (tx, horizon_y), (bx, sh), 2)
+            pygame.draw.line(surface, (130, 142, 165), (tx, horizon_y), (bx, sh), 3)
+
+        # Sleek semi-transparent HUD banner across top
+        hud_bar = pygame.Surface((sw, horizon_y + 10), pygame.SRCALPHA)
+        hud_bar.fill((10, 14, 22, 190))
+        surface.blit(hud_bar, (0, 0))
 
         # 3. Draw Approaching Obstacles
         for obs in self.mechanics.obstacles:
@@ -265,13 +276,13 @@ class RunnerGame:
 
             box_size = max(14, int(65 * pct))
             if obs.obstacle_type == "low_hurdle":
-                color = (230, 126, 34)  # Orange hurdle
+                color = (230, 126, 34)
                 pygame.draw.rect(surface, color, (lane_cx - box_size // 2, cur_y - box_size // 2, box_size, box_size // 2), border_radius=4)
             elif obs.obstacle_type == "high_bar":
-                color = (155, 89, 182)  # Purple overhead bar
+                color = (155, 89, 182)
                 pygame.draw.rect(surface, color, (lane_cx - box_size // 2, cur_y - box_size, box_size, box_size // 3), border_radius=4)
             else:
-                color = (231, 76, 60)   # Red barrier
+                color = (231, 76, 60)
                 pygame.draw.rect(surface, color, (lane_cx - box_size // 2, cur_y - box_size, box_size, box_size), border_radius=4)
 
         # 4. Draw Approaching Power-Ups
@@ -349,7 +360,6 @@ class RunnerGame:
             stat_surf = font_stat.render(text, True, (200, 210, 220))
             surface.blit(stat_surf, (sw // 2 - stat_surf.get_width() // 2, start_y + i * 50))
 
-        # Navigable Options (Play Again / Main Menu)
         menu_y = int(sh * 0.68)
         for i, opt in enumerate(self.results_options):
             is_sel = (i == self.results_selected_index)

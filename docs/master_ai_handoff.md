@@ -12,7 +12,7 @@
 - **Project Name:** Kids Motion Game
 - **Target Platform:** Python 3.12 (virtual environment `.venv`) on Windows 11 (Lenovo ThinkPad i5 12th gen, 8 GB RAM), PowerShell, VS Code
 - **Primary Outputs:** Xiaomi TV 43" (1080p pygame via HDMI in Game Mode) + HDMI audio
-- **Inputs:** Keyboard (Phase A/B fallback), Phone/Webcam (Phase C/D/E via OpenCV + MediaPipe)
+- **Inputs:** Keyboard (Phase A/B fallback), Phone/Webcam (Xiaomi Poco X6 Pro USB via Iriun/DroidCam), Laptop Webcam (backup)
 - **Repo:** private GitHub repo `nasiriqbal49/kids_game`, branch `main`, local folder `D:\kids_game`. The AI cannot see the private repo; ask the owner to paste files or run the commands in AI_START_HERE section 6.
 - **Original PDF plan:** deleted from the repo by the owner. `docs/full_game_plan.md` and `docs/use_case_catalogue.md` are the only source of truth.
 
@@ -23,8 +23,24 @@
 - `core/events.py`: event catalogue and immutable `Event` dataclass.
 - `core/event_bus.py`: pub/sub with catalogue enforcement, payload validation, subscriber error isolation (disabled after consecutive failures; success resets the count), thread-safe `post()`/`drain()` guarded by a lock, critical-event protection under congestion, debug tap with sampling, stale-event helper, time-limited shutdown flush.
 - `core/input_keyboard.py`: keyboard adapter (key-repeat suppression, duck hold, lean cancel, focus-loss reset, Ctrl for parent keys, config key bindings with fallback, camera-only mode switch, latency simulation through `bus.post()`).
+- `engine/display.py`: Pygame 1080p rendering surface targeted to TV (display index 1) with laptop screen fallback, surface-scaled HUD, photosensitivity limits (<= 3 flashes/sec), low FPS automatic degradation, 10-ft readable fonts, menu hold-to-select, and HDMI disconnect auto-pause + 3s countdown.
+- `engine/audio.py`: Pygame mixer with in-memory synthetic procedural waveform generator (sine/square) fallback, priority channels for hits/game-over, low-health warning buzzer, state-controlled running loop, and volume cap enforcement.
+- `engine/event_pump.py`: Central owner of the pygame event pump (Gap G10); routes window events to display and key events to input adapter.
+- `engine/game_engine.py`: Reusable game loop, state machine with legal transition enforcement, fixed-timestep accumulator with lag spike clamp, auto-pause on zone exit past 1.0s grace, speed ramping, error boundary, and idle timeout.
+- `engine/mechanics/`: Reusable gameplay library (`entities.py`, `manager.py`) with obstacles (hurdles, high bars, lane barriers), power-ups (shield, slow_down, double_points, health_refill), collision verification, forgiving hitboxes, streak multipliers, and safe spawn spacing.
+- `engine/games/runner.py`: 3-lane pseudo-3D perspective road runner taking 86% of screen, player jump arc/duck, power-up collection, personal best tracking, difficulty presets, and navigable results screen.
+- `vision/camera_manager.py`: Multi-threaded OpenCV capture, horizontal mirroring, auto-reconnect retry loop, stale frame detection, hardware discovery, and low FPS downscaling.
+- `vision/debug_tools.py`: On-screen diagnostic overlay (F3), JSON landmark session recorder with metadata, deterministic replayer, ground-truth jump accuracy scoring, and disk space protection.
+- `vision/pose_tracker.py`: MediaPipe 33-point body tracking (pinned `mediapipe==0.10.14`), 150ms motion blur holdover, partial body check, child scale check, and fail-soft fallback.
+- `vision/zone_calibration.py`: 2D floor bounding box, foot-tracking, jump vertical immunity, edge warning band, and JSON persistence.
+- `vision/player_lock.py`: 0.5s stable presence lock, nearest-to-center multi-kid selection, bystander rejection, 2.0s occlusion grace, and body proportions tracking.
+- `vision/action_detector.py`: JUMP, LAND, DUCK, STAND, LEAN_LEFT, LEAN_RIGHT, LEAN_CENTER, HANDS_UP with pre-jump crouch spring detection, ankle-lift tracking, dynamic baseline drift adaptation, and hysteresis.
+- `identity/profile_manager.py`: Universal player profile database, atomic JSON save with rolling `.bak` backup, virtual coin economy wallet, per-game high scores, avatar customization, parent-confirmed deletion, and guest mode.
+- `identity/measurement_capture.py`: Guided superhero pose calibration, 2.0s stability filter, test jump apex tracking, implausible height guard, and parent manual entry fallback.
+- `vision/camera_supervisor.py`: Multi-camera supervisor managing the automatic fallback chain (`Phone -> Laptop Webcam -> Keyboard`), hot-plug re-promotion, and orientation locking (0°, 90°, 180°, 270°).
 - `tools/show_tree.py`: regenerates the directory tree doc.
-- Tests: `tests/test_config.py` (15), `tests/test_event_bus.py` (13), `tests/test_input_keyboard.py` (10), `tests/test_logger.py` (5). **43 tests, all passing** (verified from real output on 2026-10-28).
+- `tools/update_git_commits.py`: regenerates the commit log doc.
+- **Verified Unit Tests:** 186 unit tests across 19 test files, all passing.
 
 ## 3. Strict Coding Rules
 1. **Pacing:** small, testable portions. No bloated multi-module scripts in a single step.
@@ -32,43 +48,24 @@
 3. **Cross-thread rule:** background threads use `bus.post()`; only the main thread calls `bus.publish()` and `bus.drain()`.
 4. **Decoupled loops:** camera runs in a separate thread (30 FPS max); game renders at locked 60 FPS.
 5. **Honesty:** never claim "Pass" or a test count without real test output.
-6. **Git discipline:** after every working module/test, guide the user to `git add .`, commit with a descriptive message naming module and use-case IDs, then `git push`.
-7. Full rules are in `docs/AI_START_HERE.md`.
+6. **Exact instructions:** when providing code changes, provide the complete replacement file or complete method to prevent indentation errors.
+7. **Git discipline:** after every working module/test, guide the user to `git add .`, commit with a descriptive message naming module and use-case IDs, then `git push`.
+8. **No Redaction:** Never shorten, summarise, or drop sections from reference documents.
 
 ## 4. Current Exact State & Next Immediate Step
 
-### Current State (2026-10-29)
+### Current State (2026-10-30)
 - **Phase A (Foundation) certified:** Modules 1, 2, 3 (43 tests).
 - **Phase B (Playable Game with Keyboard) certified (Milestone M1):** Modules 4, 5, 6, 7, 8 (70 tests).
-- **Phase C (Computer Vision & Tracking) certified (Milestone M2):**
-  - **Module 9 (Camera Manager):** 12 tests (`tests/test_camera_manager.py`).
-  - **Module 10 (Debug & Replay Tools):** 8 tests (`tests/test_debug_tools.py`).
-  - **Module 11 (Pose Tracker):** 8 tests (`tests/test_pose_tracker.py`).
-  - **Module 12 (Zone and Calibration):** 6 tests (`tests/test_zone_calibration.py`).
-  - **Module 13 (Player Lock):** 6 tests (`tests/test_player_lock.py`).
-  - **Module 14 (Action Detector):** 9 tests (`tests/test_action_detector.py`).
-- **Total Test Suite:** **162 verified passing unit tests** across 16 test files (`python -m unittest discover -s tests -t . -v`).
-- **Milestones Achieved:**
-  - **Milestone M1:** Playable Keyboard Runner certified.
-  - **Milestone M2:** Body Control Action Tracking certified.
+- **Phase C (Computer Vision & Tracking) certified (Milestone M2):** Modules 9, 10, 11, 12, 13, 14 (49 tests).
+- **Phase D (Identity & Measurement) certified (Milestone M3):** Modules 15, 16 (19 tests).
+- **Phase E (Phone Cameras & Fallback Chain) certified (Milestone M4):** Module 17 (5 tests).
+- **Live Playtest Verified:** Real child jump, duck, and lean tested live on 43" Xiaomi TV via USB phone camera.
+- **Total Test Suite:** **186 verified passing unit tests** across 19 test files (`python -m unittest discover -s tests -t . -v`).
 
-Certified: Module 15 (Profile Manager) with 10 verified tests. Total: 172 passing tests.
-
-Current phase: Phase D.
-
-Next step: Live camera integration into main.py (Choice A) OR Module 16 Measurement Capture (Choice B).
-
-Update Section 4: Certify Phase D (Modules 15 and 16 complete). Total test suite: 181 verified passing unit tests.
-
-State Milestone M3 achieved.
-
-Set Next Immediate Step: Wire the live camera pipeline into main.py for live webcam play with Nasir's child!
-
-
-### Next Immediate Step (When resuming at home)
-- **Option A (Live Camera Test):** Wire the vision pipeline into `main.py` to play the runner live using real body movements in front of the webcam.
-- **Option B (Phase D: Profiles):** Begin **Module 15: Profile Manager** in `identity/profile_manager.py` (profiles, virtual coin shop, avatar customization, rolling backups).
+### Next Immediate Step
+- **Option A:** Wire `vision/camera_supervisor.py` into `main.py` so that hot-plugging the Poco phone or disconnecting it automatically transitions live between `Phone -> Laptop Webcam -> Keyboard`.
+- **Option B:** Begin **Module 18: Games 2 and 3** (Lane Switch runner & Freeze Dance / Lava) or build the Pre-Game Virtual Coin Shop UI.
 
 ### Known open items
-See "Known gaps and open items" in `docs/progress_tracker.md` (G1, G2, G4, G5, G6 open).
-
+See "Known gaps and open items" in `docs/progress_tracker.md` (G1, G2, G4, G5 open).

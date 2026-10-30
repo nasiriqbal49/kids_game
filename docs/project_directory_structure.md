@@ -50,6 +50,7 @@ kids_game/
 │   ├── test_action_detector.py
 │   ├── test_audio.py
 │   ├── test_camera_manager.py
+│   ├── test_camera_supervisor.py
 │   ├── test_config.py
 │   ├── test_debug_tools.py
 │   ├── test_display.py
@@ -67,13 +68,18 @@ kids_game/
 │   └── test_zone_calibration.py
 ├── tools
 │   ├── extract_module.py
+│   ├── inspect_cameras.py
 │   ├── make_session_diff.py
 │   ├── show_tree.py
 │   └── update_git_commits.py
+├── user_data
+│   ├── profiles.json
+│   └── profiles.json.bak
 ├── vision
 │   ├── __init__.py
 │   ├── action_detector.py
 │   ├── camera_manager.py
+│   ├── camera_supervisor.py
 │   ├── debug_tools.py
 │   ├── player_lock.py
 │   ├── pose_tracker.py

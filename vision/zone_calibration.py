@@ -14,12 +14,12 @@ log = get_logger("zone_calibration")
 @dataclass
 class ZoneGeometry:
     """Normalized 2D floor bounding box representing the marked floor tiles."""
-    min_x: float = 0.25   # Left boundary (normalized 0.0 - 1.0)
-    max_x: float = 0.75   # Right boundary
-    min_y: float = 0.50   # Top boundary (back of zone)
-    max_y: float = 0.98   # Bottom boundary (front of zone nearest camera)
-    edge_margin: float = 0.08  # 8% edge warning band (UC 12.04)
-    pixels_per_meter: float = 320.0  # Scale reference from 2ft tiles (UC 12.01)
+    min_x: float = 0.10   # Wide left boundary
+    max_x: float = 0.90   # Wide right boundary
+    min_y: float = 0.15   # Deep back boundary (allows standing 10-15 ft away!)
+    max_y: float = 0.98   # Front boundary nearest camera
+    edge_margin: float = 0.05  # Forgiving edge margin
+    pixels_per_meter: float = 320.0
 
 
 class ZoneCalibrator:

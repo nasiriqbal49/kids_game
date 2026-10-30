@@ -177,3 +177,39 @@ This document tracks every error, edge-case hurdle, or design correction encount
 - **Root Cause:** The test loop fed 5 frames of 0.5s (2.5s total). The hold completed on frame 4 (2.0s) and correctly emitted `"Height check failed"`, but frame 5 immediately started the retry countdown, overwriting the `feedback` variable.
 - **Resolution:** Adjusted the test to feed exactly 4 frames of 0.5s so the 4th frame captures the rejection feedback. All 9 tests pass.
 - **Status:** **Resolved & Verified**
+
+---
+
+### Issue #022: Test 16.06 frame loop overshooting and overwriting rejection feedback
+- **Module:** Module 16 (Measurement Capture tests, UC 16.06)
+- **Symptom:** `AssertionError: 'failed' not found in 'hold still! 2...'` in `test_16_06_implausible_height_rejected_and_retried`.
+- **Root Cause:** The test loop fed 5 frames of 0.5s (2.5s total). The hold completed on frame 4 (2.0s) and correctly emitted `"Height check failed"`, but frame 5 immediately started the retry countdown, overwriting the `feedback` variable.
+- **Resolution:** Adjusted the test to feed exactly 4 frames of 0.5s so the 4th frame captures the rejection feedback. All 9 tests pass.
+- **Status:** **Resolved & Verified**
+
+---
+
+### Issue #023: MediaPipe 1.2.0 missing built-in solutions module on Python 3.12
+- **Module:** Module 11 (Pose Tracker live webcam playtest)
+- **Symptom:** `MediaPipe Pose unavailable (module 'mediapipe' has no attribute 'solutions'). Running in keyboard-only mode (UC 11.05)`.
+- **Root Cause:** In the recent MediaPipe 1.2.0 release on PyPI, Google stripped out the classic `mp.solutions.pose` API.
+- **Resolution:** Pinned `mediapipe==0.10.14` in virtual environment, which has full native Python 3.12 Windows support and all 33 landmark solutions pre-bundled. Verified with `hasattr(mp, 'solutions') == True`.
+- **Status:** **Resolved & Verified**
+
+---
+
+### Issue #024: Pre-jump crouch locking ActionDetector into DUCK and blocking JUMP
+- **Module:** Module 14 (Action Detector live playtest)
+- **Symptom:** When a child jumps on camera, no jump occurs on screen; instead, duck is triggered.
+- **Root Cause:** A child naturally crouches down to spring into a jump. The crouch dropped hips, triggering `is_ducking = True`. When they sprang up, the detector required them to already be higher than baseline while moving fast. At the peak of their jump, velocity was zero, so the jump never fired, and landing knee-bend triggered duck again.
+- **Resolution:** Added explosive spring detection (`rise_from_crouch > 0.04` out of duck) and shoe/ankle-lift tracking, and increased `jump_refractory_sec` to 0.45s to prevent double-firing. Verified live with Nasir's child.
+- **Status:** **Resolved & Verified**
+
+---
+
+### Issue #025: Circular import in CameraSupervisor and background thread initial state assertion
+- **Module:** Module 17 (Camera Supervisor tests, UC 17.02, 17.05)
+- **Symptom:** `ImportError: cannot import name 'CameraSupervisor' from partially initialized module 'vision.camera_supervisor'` and assertion failure comparing `KEYBOARD != PHONE`.
+- **Root Cause:** Line 8 of `camera_supervisor.py` had an accidental self-import. In tests, background device threads needed 0.05s to query OpenCV and grab the first frame before asserting active source.
+- **Resolution:** Removed the self-import and added thread yield time in test fixtures before evaluation. All 5 tests pass.
+- **Status:** **Resolved & Verified**
