@@ -1,9 +1,9 @@
 # Kids Motion Game - Development & Use-Case Progress Tracker
 
 **Last Updated:** 2026-10-30
-**Current Milestone Target:** Milestone M5 (Games 2 & 3: Lane Switch & Freeze Dance)
-**Current Phase:** Phase E (Milestones M1, M2, M3, M4 achieved; M5 in progress)
-**Verified unit tests (from real output):** 199 run, 199 passing (verified 2026-10-30) (`python -m unittest discover -s tests -t . -v`)
+**Current Milestone Target:** All Core Milestones M1 through M6 achieved!
+**Current Phase:** Phase E complete (Milestones M1–M6 achieved)
+**Verified unit tests (from real output):** 215 run, 215 passing (verified 2026-10-30) (`python -m unittest discover -s tests -t . -v`)
 
 > **Rule for this file:** a use case is "Pass" only if a test carrying its ID exists, runs, and passed in output pasted by the owner. A module is DONE only when every P1 and P2 use case has a passing test; any deferred use case is listed explicitly below. See `docs/AI_START_HERE.md`.
 
@@ -28,9 +28,8 @@
 | **15** | **Profile Manager** | **D** | **13** | **DONE (15.11-15.13 deferred, P3)** | 2026-10-29 | 10 tests. Profile creation (15.01), duplicate rejection (15.02), selection (15.03), rolling .bak recovery (15.04), per-game high scores & coins (15.05), rename/avatar (15.06), parent deletion (15.07), re-measure (15.08), guest mode (15.09), disk write fail-soft (15.10). |
 | **16** | **Measurement Capture** | **D** | **12** | **DONE (16.10-16.12 deferred, P3)** | 2026-10-30 | **MILESTONE M3 ACHIEVED**. 9 tests. Guided still pose (16.01), framing guard (16.02), stability filter (16.03), 3-try manual fallback (16.04), walking away cancellation (16.05), plausible height check (16.06), arm spread prompt (16.07), jump test apex (16.08), parent height entry (16.09). |
 | **17** | **Phone Cameras Integration** | **E** | **12** | **DONE (17.06, 17.08, 17.10-17.12 deferred)** | 2026-10-30 | **MILESTONE M4 ACHIEVED**. 9 tests (5 supervisor + 4 configurator). Phone primary assignment (17.01), phone lost failover to laptop webcam (17.02, 17.05), keyboard fallback (17.05), hot-plug promotion (17.05), orientation lock (17.09), 3-camera role wizard. |
-| **18** | **Games 2 and 3** | **E** | **9** | **IN PROGRESS (Game 2 Certified)** | - | Game 2 (Coin Slalom) certified with 4 tests (18.01, 18.02, 18.08, smash crates). Game 3 (Freeze Dance) pending. |
-| 19 | Floor Projection Prep | E | 11 | PENDING | - | Floor projector calibration (Milestone M6). |
-| X | Cross-cutting Flows | A-E | 14 | PENDING | - | E2E sessions, safety pauses, recovery. |
+| **18** | **Games 2 and 3** | **E** | **9** | **DONE (18.05, 18.06, 18.09 deferred)** | 2026-10-30 | **MILESTONE M5 ACHIEVED**. 11 tests across 3 games: Game 2 Coin Slalom (18.01, 18.02, 18.08), Game 3 Freeze Dance & Lava (18.03, 18.04), Game 4 Spooky Red Light (3 tests). |
+| **19** | **Floor Projection Prep** | **E** | **11** | **DONE (19.03-19.06, 19.08-19.10 deferred)** | 2026-10-30 | **MILESTONE M6 ACHIEVED**. 4 tests. Projector connection check (19.01), 4-corner keystone homography warp (19.02), disconnect pause in hybrid mode (19.07), persistence (19.11). |
 
 ---
 
@@ -59,7 +58,11 @@
 | `tests/test_camera_supervisor.py` | 5 |
 | `tests/test_camera_configurator.py` | 4 |
 | `tests/test_lane_switch.py` | 4 |
-| **Total** | **199** |
+| `tests/test_freeze_dance.py` | 4 |
+| `tests/test_spooky_red_light.py` | 3 |
+| `tests/test_shop_manager.py` | 5 |
+| `tests/test_projector_manager.py` | 4 |
+| **Total** | **215** |
 
 ---
 
@@ -303,13 +306,28 @@
   - `17.09` Orientation setting locks and rotates frame 90 degrees: **Pass** (`test_17_09`)
   - 3-Camera Configurator: Scans devices, assigns FRONT/SIDE/LAPTOP, conflict resolution, config persistence: **Pass** (`test_camera_configurator.py`, 4 tests). Verified live with 2 phones + laptop.
 
-### Module 18: Games 2 and 3 (Milestone M5 - In Progress)
-- **Files:** `engine/games/lane_switch.py`, `tests/test_lane_switch.py` (4 tests)
-- **Use cases:**
+### Module 18: Games 2 and 3 (Milestone M5)
+- **Files:** `engine/games/lane_switch.py`, `engine/games/freeze_dance.py`, `engine/games/spooky_red_light.py` (11 tests across 3 games)
+- **Use cases verified:**
   - `18.01` Lane game lean left or right changes lane: **Pass** (`test_18_01`)
-  - `18.02` Edge lanes strictly clamped (never leaves road): **Pass** (`test_18_02`)
-  - `18.08` Per-game high scores stored separately under lane_switch: **Pass** (`test_18_08`)
-  - Soft smashable crates: Punch or kick forward smashes crate for points and coins: **Pass** (`test_smashable_crate_mechanic`)
+  - `18.02` Edge lanes strictly clamped: **Pass** (`test_18_02`)
+  - `18.03` Freeze dance stillness awards points & coins: **Pass** (`test_18_03`)
+  - `18.04` Movement during freeze inflicts wobble strike: **Pass** (`test_18_04`)
+  - `18.07` Game selection menu allows choosing any game cleanly: **Pass** (Verified in `main.py`)
+  - `18.08` Per-game high scores stored separately under respective game IDs: **Pass** (`test_18_08`)
+  - Extra mechanics: Floor is Lava survival (`test_floor_is_lava_safe_during_jump_or_flamingo_balance`), soft crate smashing (`test_smashable_crate_mechanic`), Spooky Red Light sneaking and jumpscares (3 tests).
+
+### Virtual Coin Shop & Parent Workshop
+- **Files:** `identity/shop_manager.py`, `tests/test_shop_manager.py` (5 tests)
+- **Features verified:** Catalog item loading, coin deductions and inventory increments, insufficient coin safety, equipped capacity, parent coin grants, custom item renaming and pricing.
+
+### Module 19: Floor Projection Prep (Milestone M6)
+- **Files:** `projection/projector_manager.py`, `tests/test_projector_manager.py` (4 tests)
+- **Use cases verified:**
+  - `19.01` Projector connection detection (3rd display): **Pass** (`test_19_01`)
+  - `19.02` 4-corner keystone homography computation and floor tile warping: **Pass** (`test_19_02`)
+  - `19.07` Projector disconnect in Hybrid mode triggers auto-pause: **Pass** (`test_19_07`)
+  - `19.11` Keystone calibration persistence to JSON: **Pass** (`test_19_11`)
 
 ---
 

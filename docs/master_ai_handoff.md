@@ -61,15 +61,19 @@
 - **Phase B (Playable Game with Keyboard) certified (Milestone M1):** Modules 4, 5, 6, 7, 8 (70 tests).
 - **Phase C (Computer Vision & Tracking) certified (Milestone M2):** Modules 9, 10, 11, 12, 13, 14 (53 tests).
 - **Phase D (Identity & Measurement) certified (Milestone M3):** Modules 15, 16 (19 tests).
-- **Phase E (Multi-Camera & More Games):** 
-  - Module 17 (Camera Supervisor & 3-Camera Configurator) certified (9 tests).
-  - Module 18 (Game 2: Coin Slalom certified; Game 3 pending) (4 tests).
+- **Phase E (Multi-Camera, Arcade Suite & Floor Projection) certified (Milestones M4, M5, M6):**
+  - **Module 17 (Camera Supervisor & 3-Camera Configurator):** 9 tests.
+  - **Module 18 (Games 2, 3, 4):** 11 tests (`lane_switch.py`, `freeze_dance.py`, `spooky_red_light.py`).
+  - **Virtual Coin Shop & Parent Workshop:** 5 tests (`shop_manager.py`).
+  - **Module 19 (Floor Projector Manager):** 4 tests (`projector_manager.py`).
 - **Live Playtest Verified:** Real child jump, duck, and lean tested live on 43" Xiaomi TV via USB phone camera. Multi-camera setup with 2 phones + laptop webcam verified.
-- **Total Test Suite:** **199 verified passing unit tests** across 21 test files (`python -m unittest discover -s tests -t . -v`).
+- **Total Test Suite:** **215 verified passing unit tests** across 25 test files (`python -m unittest discover -s tests -t . -v`).
+- **All Core Architecture Milestones M1 through M6 are officially ACHIEVED!**
 
 ### Next Immediate Step
-- Build **Game 3: Freeze Dance & Floor is Lava** (`engine/games/freeze_dance.py`) to complete Module 18 and officially achieve **Milestone M5**!
-- Or build the **Pre-Game Virtual Coin Shop & Parent Workshop UI** in the Main Menu.
+- Live family playtest of all 4 games (`python main.py`).
+- Fine-tune child gesture sensitivities based on real-world play feedback.
+- Connect Emotion-Matching Monsters into the games or customize homemade art/audio via the Parent Workshop.
 
 ### Known open items
 See "Known gaps and open items" in `docs/progress_tracker.md` (G1, G2, G4, G5 open).
