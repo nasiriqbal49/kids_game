@@ -29,8 +29,10 @@ kids_game/
 ├── engine
 │   ├── games
 │   │   ├── __init__.py
+│   │   ├── freeze_dance.py
 │   │   ├── lane_switch.py
-│   │   └── runner.py
+│   │   ├── runner.py
+│   │   └── spooky_red_light.py
 │   ├── mechanics
 │   │   ├── __init__.py
 │   │   ├── entities.py
@@ -43,9 +45,12 @@ kids_game/
 ├── identity
 │   ├── __init__.py
 │   ├── measurement_capture.py
-│   └── profile_manager.py
+│   ├── profile_manager.py
+│   └── shop_manager.py
 ├── logs
 │   └── kidsgame.log
+├── projection
+│   └── projector_manager.py
 ├── tests
 │   ├── __init__.py
 │   ├── test_action_detector.py
@@ -58,6 +63,7 @@ kids_game/
 │   ├── test_display.py
 │   ├── test_event_bus.py
 │   ├── test_event_pump.py
+│   ├── test_freeze_dance.py
 │   ├── test_game_engine.py
 │   ├── test_game_runner.py
 │   ├── test_input_keyboard.py
@@ -68,6 +74,9 @@ kids_game/
 │   ├── test_player_lock.py
 │   ├── test_pose_tracker.py
 │   ├── test_profile_manager.py
+│   ├── test_projector_manager.py
+│   ├── test_shop_manager.py
+│   ├── test_spooky_red_light.py
 │   └── test_zone_calibration.py
 ├── tools
 │   ├── extract_module.py
