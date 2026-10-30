@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "saved_at": 1793337572.6711476,
+  "saved_at": 1793354057.9728327,
   "profiles": [
     {
       "profile_id": "72ef69ce-021f-4da4-bd16-6468b1d9a0e5",
@@ -15,7 +15,22 @@
       },
       "measurements": {},
       "created_at": 1793287581.6657267,
-      "last_played_at": 1793337572.6711476
+      "last_played_at": 1793354022.0126786
+    },
+    {
+      "profile_id": "0c1f9082-0cce-49e8-9d62-e23697a92b76",
+      "name": "Player 2",
+      "coins": 0,
+      "inventory": {},
+      "high_scores": {},
+      "avatar": {
+        "color": "blue",
+        "hat": "none",
+        "accessory": "none"
+      },
+      "measurements": {},
+      "created_at": 1793354057.9527962,
+      "last_played_at": 1793354057.9728327
     }
   ]
 }

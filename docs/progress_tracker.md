@@ -2,8 +2,8 @@
 
 **Last Updated:** 2026-10-30
 **Current Milestone Target:** Milestone M5 (Games 2 & 3: Lane Switch & Freeze Dance)
-**Current Phase:** Phase E (Milestones M1, M2, M3, M4 achieved)
-**Verified unit tests (from real output):** 186 run, 186 passing (verified 2026-10-30) (`python -m unittest discover -s tests -t . -v`)
+**Current Phase:** Phase E (Milestones M1, M2, M3, M4 achieved; M5 in progress)
+**Verified unit tests (from real output):** 199 run, 199 passing (verified 2026-10-30) (`python -m unittest discover -s tests -t . -v`)
 
 > **Rule for this file:** a use case is "Pass" only if a test carrying its ID exists, runs, and passed in output pasted by the owner. A module is DONE only when every P1 and P2 use case has a passing test; any deferred use case is listed explicitly below. See `docs/AI_START_HERE.md`.
 
@@ -12,23 +12,23 @@
 | # | Module Name | Phase | Total Use Cases | Status | Completed At | Notes |
 |---|---|---|---|---|---|---|
 | **1** | **Config and Logging** | **A** | **10** | **DONE (01.10 deferred, P3)** | 2026-10-28 | 9 of 10 verified, 20 tests (15 config, 5 logger). 01.10 privacy filter deferred (P3). |
-| **2** | **Event Bus** | **A** | **11** | **DONE** | 2026-10-28 | 11 of 11 verified, 13 tests (11 catalogue + 2 extra: consecutive-failure reset, concurrent posting). Thread-safe lock added after review. |
-| **3** | **Input Adapter (Keyboard)** | **A** | **9** | **DONE (03.07 partial)** | 2026-10-28 | 9 of 9 have tests, 10 tests. 03.07 covers pause and debug only; quit and recalibrate keys deferred until those features exist. |
-| **4** | **Display and UI** | **B** | **13** | **DONE** | 2026-10-28 | 24 display tests (+6 pump). All 13 use cases verified. 1080p HUD scaling, low-health warning badge, particles toggle, player name, HDMI disconnect pause & 3s countdown (04.03), menu drawing & keyboard fallback (04.08, 04.09). |
-| **5** | **Audio Manager** | **B** | **10** | **DONE (05.09, 05.10 deferred, P3)** | 2026-10-28 | 7 tests. In-memory procedural synth (05.03), volume cap & mute (05.06), low-health alert state (05.07), pause/resume channels (05.08), priority channel for hits/game-over (05.02), state-controlled looping (05.05). |
-| **6** | **Game Engine Core** | **B** | **12** | **DONE (06.12 deferred, P3)** | 2026-10-28 | 11 tests. Fixed timestep loop (06.07), state machine transitions & legal table (06.01, 06.02), parent pause & zone auto-pause (06.03, 06.04), zero health game over (06.05), difficulty ramp (06.06), error boundary (06.08), idle timeout (06.09), quit mid-game (06.10), reset (06.11). 06.12 session reminder deferred (P3). |
-| **7** | **Game Mechanics Library** | **B** | **15** | **DONE** | 2026-10-28 | 15 tests. Cleared by jump/duck/lean (07.01, 07.05, 07.14), damage & 1.0s invulnerability (07.02, 07.03), timing feedback & forgiving hitboxes (07.04), powerup expiration & refresh (07.06, 07.07), shield absorb (07.08), health refill bonus points (07.09), minimum spawn spacing (07.10), streak reset on hit (07.11), airborne high-bar collision (07.12), slow_down speed scale (07.13), lane barrier collision (07.14), off-screen pruning for flat memory (07.15). |
-| **8** | **Game 1: Runner** | **B** | **9** | **DONE (08.07, 08.09 deferred)** | 2026-10-29 | **MILESTONE M1 ACHIEVED**. 7 tests. Full 3-lane perspective runner with jump air-time lockout (08.03), idle player damage & game over (08.02), personal best tracking (08.04), difficulty presets & speed cap (08.05, 08.06), and results screen (08.08). 08.07 tutorial deferred to Phase D profiles; 08.09 camera play deferred to Phase C. |
-| **9** | **Camera Manager** | **C** | **14** | **DONE (09.11, 09.13 deferred)** | 2026-10-29 | 12 tests. OpenCV background capture thread (09.01, 09.09), camera lost/disconnected (09.02, 09.03), auto-reconnect retry loop (09.04), busy camera reporting (09.05), stale frame detection (09.06), hardware discovery & picker (09.07), low FPS auto-downscale (09.08), secondary camera throttling (09.10), horizontal mirroring (09.12), clean shutdown (09.14). 09.11 OS permissions & 09.13 auto-exposure deferred. |
-| **10** | **Debug & Replay Tools** | **C** | **9** | **DONE (10.08 deferred, P3)** | 2026-10-29 | 8 tests. Diagnostic overlay (10.01), JSON landmark recorder (10.02), deterministic replayer (10.03), threshold comparison summary (10.04), ground-truth jump scoring (10.05), low disk guard (10.06), corrupt file rejection (10.07), recording file cleanup (10.09). 10.08 raw video deferred. |
-| **11** | **Pose Tracker** | **C** | **12** | **DONE (11.04, 11.09, 11.10, 11.12 deferred)** | 2026-10-29 | 8 tests. MediaPipe body tracking at 20-30 FPS (11.01), empty frames player lost (11.02), cut-off limbs partial check (11.03), fail-soft fallback (11.05), low light warning (11.06), 150ms motion blur holdover (11.07), child scale check (11.08), joint mapping (11.11). |
-| **12** | **Zone and Calibration** | **C** | **12** | **DONE (12.02, 12.06, 12.07, 12.11, 12.12 deferred)** | 2026-10-29 | 6 tests. Inside zone (12.03), edge warning band (12.04), foot-based out of zone event (12.05), jump vertical immunity (12.08), upper body lean uses feet (12.09), JSON calibration persistence by role (12.01, 12.10). |
-| **13** | **Player Lock** | **C** | **11** | **DONE (13.07, 13.09-13.11 deferred)** | 2026-10-29 | 6 tests. 0.5s stable presence lock (13.01), nearest-to-center multi-kid lock (13.02), bystander rejection (13.03), 2.0s occlusion grace (13.04, 13.05), jump out of frame retention (13.06), body proportions swap prevention (13.08). |
-| **14** | **Action Detector** | **C** | **17** | **DONE (14.04, 14.09, 14.11, 14.12, 14.15-14.17 deferred)** | 2026-10-29 | **MILESTONE M2 ACHIEVED**. 9 tests. JUMP and LAND pairs (14.01), bounce ignored (14.02), slow walk ignored (14.03), land between quick jumps (14.05), DUCK and STAND on rise (14.06), LEAN left/right/center with hysteresis (14.07), loss resets neutral posture (14.08), hands up does not jump (14.13), 5.0s stuck duck auto-reset (14.14). |
+| **2** | **Event Bus** | **A** | **11** | **DONE** | 2026-10-28 | 11 of 11 verified, 13 tests. Thread-safe lock and failure reset verified. |
+| **3** | **Input Adapter (Keyboard)** | **A** | **9** | **DONE (03.07 partial)** | 2026-10-28 | 9 of 9 have tests, 11 tests. Full comedic shortcuts added. |
+| **4** | **Display and UI** | **B** | **13** | **DONE** | 2026-10-28 | 24 display tests (+6 pump). All 13 use cases verified. 1080p HUD scaling, low-health badge, HDMI disconnect pause & 3s countdown (04.03), menus (04.08, 04.09). |
+| **5** | **Audio Manager** | **B** | **10** | **DONE (05.09, 05.10 deferred, P3)** | 2026-10-28 | 7 tests. In-memory procedural synth (05.03), volume cap & mute (05.06), low-health alert state (05.07), pause/resume channels (05.08). |
+| **6** | **Game Engine Core** | **B** | **12** | **DONE (06.12 deferred, P3)** | 2026-10-28 | 11 tests. Fixed timestep loop (06.07), state transitions (06.01, 06.02), pause/resume (06.03, 06.04), zero health game over (06.05), difficulty ramp (06.06). |
+| **7** | **Game Mechanics Library** | **B** | **15** | **DONE** | 2026-10-28 | 15 tests. JUMP/DUCK/LEAN clears (07.01, 07.05, 07.14), damage & invulnerability (07.02, 07.03), powerups (07.06-07.09, 07.13), spawner spacing (07.10), streak (07.11). |
+| **8** | **Game 1: Runner** | **B** | **9** | **DONE (08.07, 08.09 deferred)** | 2026-10-29 | **MILESTONE M1 ACHIEVED**. 7 tests. Full 3-lane perspective runner with jump air-time lockout (08.03), idle damage (08.02), personal best (08.04), presets (08.05), results (08.08). |
+| **9** | **Camera Manager** | **C** | **14** | **DONE (09.11, 09.13 deferred)** | 2026-10-29 | 12 tests. OpenCV background capture thread (09.01, 09.09), disconnects (09.02, 09.03), auto-reconnect (09.04), stale frames (09.06), low FPS downscaling (09.08). |
+| **10** | **Debug & Replay Tools** | **C** | **9** | **DONE (10.08 deferred, P3)** | 2026-10-29 | 8 tests. Diagnostic overlay (10.01), JSON recorder (10.02), replayer (10.03), threshold comparison (10.04), ground-truth scoring (10.05), low disk guard (10.06). |
+| **11** | **Pose Tracker** | **C** | **12** | **DONE (11.04, 11.09, 11.10, 11.12 deferred)** | 2026-10-29 | 8 tests. MediaPipe body tracking (11.01), empty frames (11.02), partial body (11.03), fail-soft (11.05), low light (11.06), 150ms motion blur holdover (11.07), scale check (11.08). |
+| **12** | **Zone and Calibration** | **C** | **12** | **DONE (12.02, 12.06, 12.07, 12.11, 12.12 deferred)** | 2026-10-29 | 6 tests. Inside zone (12.03), edge warning (12.04), foot-based out of zone (12.05), jump vertical immunity (12.08), lean foot check (12.09), JSON persistence (12.01, 12.10). |
+| **13** | **Player Lock** | **C** | **11** | **DONE (13.07, 13.09-13.11 deferred)** | 2026-10-29 | 6 tests. 0.5s presence lock (13.01), nearest-to-center lock (13.02), bystander rejection (13.03), 2.0s occlusion grace (13.04, 13.05), proportions swap prevention (13.08). |
+| **14** | **Action Detector** | **C** | **17** | **DONE (14.04, 14.09, 14.11, 14.12, 14.15-14.17 deferred)** | 2026-10-29 | **MILESTONE M2 ACHIEVED**. 13 tests. JUMP/LAND (14.01), bounce ignored (14.02), slow walk ignored (14.03), quick jumps (14.05), DUCK/STAND (14.06), LEAN hysteresis (14.07), hands up (14.13), stuck duck reset (14.14), chicken flap, fart blast, flamingo balance, tickle swat. |
 | **15** | **Profile Manager** | **D** | **13** | **DONE (15.11-15.13 deferred, P3)** | 2026-10-29 | 10 tests. Profile creation (15.01), duplicate rejection (15.02), selection (15.03), rolling .bak recovery (15.04), per-game high scores & coins (15.05), rename/avatar (15.06), parent deletion (15.07), re-measure (15.08), guest mode (15.09), disk write fail-soft (15.10). |
 | **16** | **Measurement Capture** | **D** | **12** | **DONE (16.10-16.12 deferred, P3)** | 2026-10-30 | **MILESTONE M3 ACHIEVED**. 9 tests. Guided still pose (16.01), framing guard (16.02), stability filter (16.03), 3-try manual fallback (16.04), walking away cancellation (16.05), plausible height check (16.06), arm spread prompt (16.07), jump test apex (16.08), parent height entry (16.09). |
-| **17** | **Phone Cameras Integration** | **E** | **12** | **DONE (17.06, 17.08, 17.10-17.12 deferred)** | 2026-10-30 | **MILESTONE M4 ACHIEVED**. 5 tests. Phone primary assignment (17.01), phone lost failover to laptop webcam (17.02, 17.05), keyboard fallback (17.05), hot-plug promotion (17.05), orientation lock (17.09). |
-| 18 | Games 2 and 3 | E | 9 | UP NEXT | - | Lane switch & freeze dance (Milestone M5). |
+| **17** | **Phone Cameras Integration** | **E** | **12** | **DONE (17.06, 17.08, 17.10-17.12 deferred)** | 2026-10-30 | **MILESTONE M4 ACHIEVED**. 9 tests (5 supervisor + 4 configurator). Phone primary assignment (17.01), phone lost failover to laptop webcam (17.02, 17.05), keyboard fallback (17.05), hot-plug promotion (17.05), orientation lock (17.09), 3-camera role wizard. |
+| **18** | **Games 2 and 3** | **E** | **9** | **IN PROGRESS (Game 2 Certified)** | - | Game 2 (Coin Slalom) certified with 4 tests (18.01, 18.02, 18.08, smash crates). Game 3 (Freeze Dance) pending. |
 | 19 | Floor Projection Prep | E | 11 | PENDING | - | Floor projector calibration (Milestone M6). |
 | X | Cross-cutting Flows | A-E | 14 | PENDING | - | E2E sessions, safety pauses, recovery. |
 
@@ -42,7 +42,7 @@
 | `tests/test_display.py` | 24 |
 | `tests/test_event_bus.py` | 13 |
 | `tests/test_event_pump.py` | 6 |
-| `tests/test_input_keyboard.py` | 10 |
+| `tests/test_input_keyboard.py` | 11 |
 | `tests/test_logger.py` | 5 |
 | `tests/test_audio.py` | 7 |
 | `tests/test_game_engine.py` | 11 |
@@ -53,11 +53,13 @@
 | `tests/test_pose_tracker.py` | 8 |
 | `tests/test_zone_calibration.py` | 6 |
 | `tests/test_player_lock.py` | 6 |
-| `tests/test_action_detector.py` | 9 |
+| `tests/test_action_detector.py` | 13 |
 | `tests/test_profile_manager.py` | 10 |
 | `tests/test_measurement_capture.py` | 9 |
 | `tests/test_camera_supervisor.py` | 5 |
-| **Total** | **186** |
+| `tests/test_camera_configurator.py` | 4 |
+| `tests/test_lane_switch.py` | 4 |
+| **Total** | **199** |
 
 ---
 
@@ -251,7 +253,7 @@
   - `13.08` Body proportions tracking prevents swapping: **Pass** (`test_13_08`)
 
 ### Module 14: Action Detector (Milestone M2)
-- **Files:** `vision/action_detector.py`, `tests/test_action_detector.py` (9 tests)
+- **Files:** `vision/action_detector.py`, `tests/test_action_detector.py` (13 tests)
 - **Use cases:**
   - `14.01` JUMP and LAND pairs: **Pass** (`test_14_01`)
   - `14.02` Small hop or bounce under threshold ignored: **Pass** (`test_14_02`)
@@ -262,6 +264,7 @@
   - `14.08` PLAYER_LOST event resets neutral posture: **Pass** (`test_14_08`)
   - `14.13` Hands up emits HANDS_UP and never triggers JUMP: **Pass** (`test_14_13`)
   - `14.14` Stuck duck auto-resets to STAND after 5 seconds: **Pass** (`test_14_14`)
+  - Comedic Gestures: Chicken Flap wings (`test_comedic_chicken_flap_detected`), Fart Blast cloud (`test_comedic_fart_blast_detected`), Flamingo 1-leg balance (`test_comedic_flamingo_balance_detected`), Tickle Swat (`test_comedic_tickle_swat_detected`).
 
 ### Module 15: Profile Manager
 - **Files:** `identity/profile_manager.py`, `tests/test_profile_manager.py` (10 tests)
@@ -291,13 +294,22 @@
   - `16.09` Parent manual real height entry stores calibrated measurements: **Pass** (`test_16_09`)
 
 ### Module 17: Phone Cameras Integration (Milestone M4)
-- **Files:** `vision/camera_supervisor.py`, `tests/test_camera_supervisor.py` (5 tests)
+- **Files:** `vision/camera_supervisor.py`, `vision/camera_configurator.py`, `tests/test_camera_supervisor.py`, `tests/test_camera_configurator.py` (9 tests)
 - **Use cases:**
   - `17.01` Phone primary camera selected when healthy: **Pass** (`test_17_01`)
   - `17.02` Phone disconnects -> falls back cleanly to laptop webcam: **Pass** (`test_17_02`)
   - `17.05` Both cameras lost falls back to keyboard mode: **Pass** (`test_17_05`)
   - `17.05` Reconnecting phone promotes back to primary: **Pass** (`test_17_05`)
   - `17.09` Orientation setting locks and rotates frame 90 degrees: **Pass** (`test_17_09`)
+  - 3-Camera Configurator: Scans devices, assigns FRONT/SIDE/LAPTOP, conflict resolution, config persistence: **Pass** (`test_camera_configurator.py`, 4 tests). Verified live with 2 phones + laptop.
+
+### Module 18: Games 2 and 3 (Milestone M5 - In Progress)
+- **Files:** `engine/games/lane_switch.py`, `tests/test_lane_switch.py` (4 tests)
+- **Use cases:**
+  - `18.01` Lane game lean left or right changes lane: **Pass** (`test_18_01`)
+  - `18.02` Edge lanes strictly clamped (never leaves road): **Pass** (`test_18_02`)
+  - `18.08` Per-game high scores stored separately under lane_switch: **Pass** (`test_18_08`)
+  - Soft smashable crates: Punch or kick forward smashes crate for points and coins: **Pass** (`test_smashable_crate_mechanic`)
 
 ---
 

@@ -1,5 +1,5 @@
 import time
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, List
 from core.events import Event, EventType
 from core.event_bus import EventBus, get_event_bus
 from core.config import Config, get_config
@@ -11,9 +11,9 @@ log = get_logger("action_detector")
 
 class ActionDetector:
     """
-    Converts 33-point body landmarks into game action events (Module 14 - Milestone M2).
-    Outputs JUMP, LAND, DUCK, STAND, LEAN_LEFT, LEAN_RIGHT, LEAN_CENTER, HANDS_UP.
-    Tuned with pre-jump spring detection and dual hip/ankle tracking.
+    Converts 33-point body landmarks into game action events.
+    Detects JUMP, LAND, DUCK, STAND, LEAN_LEFT, LEAN_RIGHT, LEAN_CENTER, HANDS_UP,
+    plus Comedic Gestures: CHICKEN_FLAP, FART_BLAST, FLAMINGO_BALANCE, TICKLE_SWAT, GIANT_STOMP.
     """
 
     def __init__(self, bus: Optional[EventBus] = None, cfg: Optional[Config] = None):
@@ -39,33 +39,43 @@ class ActionDetector:
         self.debug_last_action: str = "STAND"
 
         # Timers & Cooldowns
-        self.jump_refractory_sec: float = 0.45  # Locks out double-triggers during air-time
+        self.jump_refractory_sec: float = 0.45
         self.last_jump_time: float = 0.0
         self.duck_timer: float = 0.0
         self.max_duck_duration_sec: float = 5.0
 
-        # Kid-friendly sensitivity thresholds
-        self.jump_threshold_ratio: float = 0.040   # 4% body rise
-        self.jump_min_velocity: float = 0.065      # Gentle upward velocity
-        self.duck_threshold_ratio: float = 0.080   # Deliberate duck (won't trigger on tiny knee bend)
-        self.ankle_jump_lift_ratio: float = 0.030  # Shoes lifting off floor
+        # Sensitivity thresholds tuned for kids
+        self.jump_threshold_ratio: float = 0.040
+        self.jump_min_velocity: float = 0.065
+        self.duck_threshold_ratio: float = 0.080
+        self.ankle_jump_lift_ratio: float = 0.030
 
         # Lean Hysteresis thresholds
         self.lean_enter_threshold: float = 0.025
         self.lean_exit_threshold: float = 0.012
 
+        # Comedic Gesture Tracking State
+        self.last_elbow_y: Optional[float] = None
+        self.flap_count: int = 0
+        self.last_flap_time: float = 0.0
+
+        self.balance_timer: float = 0.0
+        self.balance_emitted: bool = False
+        self.last_fart_time: float = 0.0
+
+        self.swat_oscillations: int = 0
+        self.last_wrist_x: Optional[float] = None
+        self.last_swat_time: float = 0.0
+
         self._subscribe_events()
 
     def _subscribe_events(self) -> None:
-        """Subscribe to tracking state changes."""
         self.bus.subscribe(EventType.PLAYER_LOST, self._on_player_lost)
 
     def _on_player_lost(self, event: Event) -> None:
-        """Tracking lost resets avatar to neutral posture (UC 14.08)."""
         self.reset_neutral_posture()
 
     def reset_neutral_posture(self) -> None:
-        """Resets all action states to neutral (UC 14.08)."""
         if self.is_airborne:
             self.is_airborne = False
             self.bus.post(Event(EventType.LAND, source="action_detector"))
@@ -81,9 +91,11 @@ class ActionDetector:
             self.bus.post(Event(EventType.LEAN_CENTER, source="action_detector"))
 
         self.debug_last_action = "STAND"
+        self.balance_timer = 0.0
+        self.balance_emitted = False
 
     def process_pose(self, pose: PoseResult, timestamp: Optional[float] = None) -> None:
-        """Main detection step for a single locked player frame (UC 14.01 - 14.14)."""
+        """Main detection step for standard and comedic gestures."""
         now = timestamp if timestamp is not None else time.time()
         dt = max(0.001, now - self.last_timestamp) if self.last_timestamp > 0 else 0.033
         self.last_timestamp = now
@@ -99,6 +111,10 @@ class ActionDetector:
         nose = lms.get("nose")
         l_ankle = lms.get("left_ankle")
         r_ankle = lms.get("right_ankle")
+        l_elbow = lms.get("left_elbow")
+        r_elbow = lms.get("right_elbow")
+        l_wrist = lms.get("left_wrist")
+        r_wrist = lms.get("right_wrist")
 
         if not (l_hip and r_hip and l_sh and r_sh):
             return
@@ -106,6 +122,7 @@ class ActionDetector:
         hip_y = (l_hip.y + r_hip.y) / 2.0
         sh_x = (l_sh.x + r_sh.x) / 2.0
         hip_x = (l_hip.x + r_hip.x) / 2.0
+        sh_y = (l_sh.y + r_sh.y) / 2.0
 
         current_ankle_y = None
         if l_ankle and r_ankle:
@@ -113,72 +130,134 @@ class ActionDetector:
         elif l_ankle or r_ankle:
             current_ankle_y = (l_ankle.y if l_ankle else r_ankle.y)
 
-        # Update body height reference
         if nose and current_ankle_y is not None:
             self.baseline_body_height = max(0.20, abs(current_ankle_y - nose.y))
 
-        # Dynamic Standing Baselines
+        # Dynamic Standing Baselines & Joint Initialization on Frame 0
         if self.baseline_hip_y is None:
             self.baseline_hip_y = hip_y
             self.last_hip_y = hip_y
             if current_ankle_y is not None:
                 self.baseline_ankle_y = current_ankle_y
+            if l_elbow and r_elbow:
+                self.last_elbow_y = (l_elbow.y + r_elbow.y) / 2.0
+            if l_wrist and r_wrist:
+                self.last_wrist_x = (l_wrist.x + r_wrist.x) / 2.0
             return
 
         if self.baseline_ankle_y is None and current_ankle_y is not None:
             self.baseline_ankle_y = current_ankle_y
 
-        # Calculate vertical displacement and velocity
         vertical_rise = self.baseline_hip_y - hip_y
         vertical_velocity = (self.last_hip_y - hip_y) / dt if self.last_hip_y is not None else 0.0
         self.last_hip_y = hip_y
 
-        # Save for live debug display
         self.debug_vertical_rise = vertical_rise
         self.debug_velocity = vertical_velocity
 
-        # Ankle lift displacement (shoes leaving the floor)
         ankle_lift = 0.0
         if self.baseline_ankle_y is not None and current_ankle_y is not None:
             ankle_lift = self.baseline_ankle_y - current_ankle_y
 
-        # Track depth during crouch for spring-jump detection
         if self.is_ducking:
             if self.lowest_hip_in_crouch is None or hip_y > self.lowest_hip_in_crouch:
                 self.lowest_hip_in_crouch = hip_y
 
-        # Dynamic baseline drift adjustment when standing still
         if abs(vertical_rise) < 0.02 and not self.is_airborne and not self.is_ducking:
             self.baseline_hip_y = (self.baseline_hip_y * 0.96) + (hip_y * 0.04)
             if current_ankle_y is not None and self.baseline_ankle_y is not None:
                 self.baseline_ankle_y = (self.baseline_ankle_y * 0.96) + (current_ankle_y * 0.04)
 
         # -------------------------------------------------------------
-        # 1. HANDS UP Detection (UC 14.13)
+        # COMEDIC GESTURE 1: CHICKEN FLAP (Wings Glide Flight)
         # -------------------------------------------------------------
-        l_wrist = lms.get("left_wrist")
-        r_wrist = lms.get("right_wrist")
+        if l_elbow and r_elbow:
+            avg_elbow_y = (l_elbow.y + r_elbow.y) / 2.0
+            if self.last_elbow_y is not None:
+                elbow_delta = self.last_elbow_y - avg_elbow_y
+                if elbow_delta > 0.035 and (now - self.last_flap_time) > 0.08:
+                    self.flap_count += 1
+                    self.last_flap_time = now
+                    if self.flap_count >= 2:
+                        self.flap_count = 0
+                        self.debug_last_action = "CHICKEN_FLAP"
+                        log.info("Comedic Action: CHICKEN_FLAP wing glide detected!")
+                        self.bus.post(Event(EventType.CHICKEN_FLAP, source="action_detector"))
+            self.last_elbow_y = avg_elbow_y
+
+        if self.last_flap_time > 0 and (now - self.last_flap_time) > 1.2:
+            self.flap_count = 0
+
+        # -------------------------------------------------------------
+        # COMEDIC GESTURE 2: FART BLAST POSE
+        # -------------------------------------------------------------
+        if not self.is_airborne and current_ankle_y is not None:
+            ankle_x = (l_ankle.x + r_ankle.x) / 2.0 if (l_ankle and r_ankle) else hip_x
+            hip_side_shift = abs(hip_x - ankle_x)
+            is_crouched = (hip_y - self.baseline_hip_y) > 0.04
+
+            if hip_side_shift > 0.070 and is_crouched and (now - self.last_fart_time) > 1.5:
+                self.last_fart_time = now
+                self.debug_last_action = "FART_BLAST"
+                log.info("Comedic Action: FART_BLAST green cloud detected!")
+                self.bus.post(Event(EventType.FART_BLAST, source="action_detector"))
+
+        # -------------------------------------------------------------
+        # COMEDIC GESTURE 3: FLAMINGO 1-LEG BALANCE
+        # -------------------------------------------------------------
+        if l_ankle and r_ankle and not self.is_airborne:
+            ankle_split_y = abs(l_ankle.y - r_ankle.y)
+            if ankle_split_y > 0.09:
+                self.balance_timer += dt
+                if self.balance_timer >= 1.0 and not self.balance_emitted:
+                    self.balance_emitted = True
+                    self.debug_last_action = "FLAMINGO_BALANCE"
+                    log.info("Comedic Action: FLAMINGO_BALANCE 1-leg hold completed!")
+                    self.bus.post(Event(EventType.FLAMINGO_BALANCE, source="action_detector"))
+            else:
+                self.balance_timer = 0.0
+                self.balance_emitted = False
+
+        # -------------------------------------------------------------
+        # COMEDIC GESTURE 4: TICKLE SWAT (Rapid Hand Waving)
+        # -------------------------------------------------------------
+        if l_wrist and r_wrist and nose:
+            if l_wrist.y < hip_y and r_wrist.y < hip_y:
+                avg_wrist_x = (l_wrist.x + r_wrist.x) / 2.0
+                if self.last_wrist_x is not None:
+                    dx = abs(avg_wrist_x - self.last_wrist_x)
+                    if dx > 0.045 and (now - self.last_swat_time) > 0.06:
+                        self.swat_oscillations += 1
+                        self.last_swat_time = now
+                        if self.swat_oscillations >= 3:
+                            self.swat_oscillations = 0
+                            self.debug_last_action = "TICKLE_SWAT"
+                            log.info("Comedic Action: TICKLE_SWAT rapid waving detected!")
+                            self.bus.post(Event(EventType.TICKLE_SWAT, source="action_detector"))
+                self.last_wrist_x = avg_wrist_x
+
+        if self.last_swat_time > 0 and (now - self.last_swat_time) > 0.8:
+            self.swat_oscillations = 0
+
+        # -------------------------------------------------------------
+        # STANDARD 1: HANDS UP / PUNCH
+        # -------------------------------------------------------------
         if l_wrist and r_wrist and nose:
             if l_wrist.y < nose.y and r_wrist.y < nose.y:
                 self.debug_last_action = "HANDS_UP"
                 self.bus.post(Event(EventType.HANDS_UP, source="action_detector"))
 
         # -------------------------------------------------------------
-        # 2. JUMP and LAND Detection (Handles Pre-Jump Crouch Springs!)
+        # STANDARD 2: JUMP and LAND Detection
         # -------------------------------------------------------------
         jump_threshold = self.jump_threshold_ratio * self.baseline_body_height
         ankle_threshold = self.ankle_jump_lift_ratio * self.baseline_body_height
         time_since_last_jump = now - self.last_jump_time
-
-        # Spring jump calculation: how fast and far did they rise from the bottom of their crouch?
         rise_from_crouch = (self.lowest_hip_in_crouch - hip_y) if (self.is_ducking and self.lowest_hip_in_crouch) else 0.0
 
         is_jump_movement = (
-            # Case A: Standard jump from standing position
             (vertical_rise > jump_threshold and vertical_velocity > self.jump_min_velocity) or
-            # Case B: Direct shoes/ankles leaving the floor
             (ankle_lift > ankle_threshold and vertical_velocity > 0.05) or
-            # Case C: Explosive spring out of a pre-jump knee bend / crouch!
             (self.is_ducking and rise_from_crouch > 0.04 and vertical_velocity > 0.10)
         )
 
@@ -192,12 +271,10 @@ class ActionDetector:
             self.is_airborne = True
             self.last_jump_time = now
             self.debug_last_action = "JUMP"
-            log.info("Action JUMP detected (rise=%.3f, vel=%.2f, ankle_lift=%.3f) (UC 14.01).",
-                     vertical_rise, vertical_velocity, ankle_lift)
+            log.info("Action JUMP detected (rise=%.3f, vel=%.2f) (UC 14.01).", vertical_rise, vertical_velocity)
             self.bus.post(Event(EventType.JUMP, source="action_detector"))
 
         elif self.is_airborne:
-            # Landing: hips return near baseline
             landing_threshold = max(0.025, jump_threshold * 0.60)
             if vertical_rise <= landing_threshold:
                 self.is_airborne = False
@@ -206,12 +283,11 @@ class ActionDetector:
                 self.bus.post(Event(EventType.LAND, source="action_detector"))
 
         # -------------------------------------------------------------
-        # 3. DUCK and STAND Detection (Only when not airborne or jumping)
+        # STANDARD 3: DUCK and STAND Detection
         # -------------------------------------------------------------
         duck_threshold = self.duck_threshold_ratio * self.baseline_body_height
 
         if not self.is_airborne and not is_jump_movement:
-            # Body drops downward past threshold
             if -vertical_rise > duck_threshold:
                 if not self.is_ducking:
                     self.is_ducking = True
@@ -223,7 +299,6 @@ class ActionDetector:
                 else:
                     self.duck_timer += dt
                     if self.duck_timer >= self.max_duck_duration_sec:
-                        log.info("Auto-resetting duck after 5.0s timeout (UC 14.14).")
                         self.is_ducking = False
                         self.duck_timer = 0.0
                         self.lowest_hip_in_crouch = None
@@ -239,7 +314,7 @@ class ActionDetector:
                 self.bus.post(Event(EventType.STAND, source="action_detector"))
 
         # -------------------------------------------------------------
-        # 4. LEAN LEFT / RIGHT / CENTER
+        # STANDARD 4: LEAN LEFT / RIGHT / CENTER
         # -------------------------------------------------------------
         torso_tilt = sh_x - hip_x
 

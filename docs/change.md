@@ -7,6 +7,37 @@
 
 ---
 
+
+## [2026-10-30 16:30] Session: `gemini-nasir-2026-10-30-m5-part1`
+- **Author:** Gemini-Nasir
+- **Git Tag:** `gemini-nasir-2026-10-30-m5-part1`
+- **Milestone In Progress:** **MILESTONE M5: GAMES 2 & 3 (GAME 2 CERTIFIED & GESTURE SYSTEM COMPLETE)**
+- **Modules Covered:** Module 17 (3-Camera Configurator UI), Module 18 (Game 2: Coin Slalom & Lane Switch), Full Gesture Catalogue Architecture.
+- **Verified Unit Tests:** 199 passing tests (`python -m unittest discover -s tests -t . -v`).
+- **What Changed:**
+  - **Live Gameplay & Multi-Camera Setup:**
+    - Completed `vision/camera_configurator.py` (Probes hardware devices, shows live side-by-side video feeds on TV, assigns FRONT, SIDE, LAPTOP roles with conflict resolution, and saves to `config.json`).
+    - Verified real multi-camera setup live: 2 Xiaomi phones via Iriun + ThinkPad laptop webcam detected, configurable, and running on TV.
+    - Added clean Main Menu startup flow (`Game 1: Hurdle Runner`, `Game 2: Coin Slalom`, `Camera Setup`, `Active Player Profile`, `Quit`).
+  - **Game 2: Coin Slalom & Lane Switch (`engine/games/lane_switch.py`):**
+    - High-speed slalom track built with 3-lane body lean control and boundary clamping (UC 18.01, 18.02).
+    - Added golden coin trails and punch/kick smashable wooden crates (+150 pts, +5 coins).
+    - Independent high-score tracking under `"lane_switch"` in player profile (UC 18.08).
+    - Created `tests/test_lane_switch.py` (4 verified unit tests).
+  - **Complete Comedic Gesture Architecture:**
+    - Declared 12 new events in `core/events.py` (`CHICKEN_FLAP`, `FART_BLAST`, `GIANT_STOMP`, `FLAMINGO_BALANCE`, `TICKLE_SWAT`, `GUEST_STAR`, `EMOTION_SMILE`, `EMOTION_ANGRY`, `EMOTION_SURPRISED`, `EMOTION_CRY`).
+    - Added full keyboard shortcuts in `core/input_keyboard.py` (`F` punch, `K` kick, `W` wings, `B` fart blast, `S` stomp, `L` balance, `T` swat).
+    - Implemented body tracking in `vision/action_detector.py` for Chicken Flap, Fart Blast, Flamingo Balance, and Tickle Swat.
+    - Added unit tests verifying gestures in `test_action_detector.py` and `test_input_keyboard.py`.
+- **Peer Review Notes for Incoming AI:**
+  - All 199 unit tests pass cleanly in ~12 seconds.
+  - Game 1 (Runner) and Game 2 (Coin Slalom) are both selectable and playable from the Main Menu.
+- **Next Immediate Step:**
+  - Build **Game 3: Freeze Dance & Floor is Lava** (`engine/games/freeze_dance.py`) to certify Milestone M5!
+  - Or build the **Pre-Game Virtual Coin Shop & Parent Workshop UI**.
+
+---
+
 ## [2026-10-30 10:30] Session: `gemini-nasir-2026-10-30-m4`
 - **Author:** Gemini-Nasir
 - **Git Tag:** `gemini-nasir-2026-10-30-m4`

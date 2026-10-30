@@ -5,7 +5,7 @@ from typing import Any, Dict
 
 # Complete Event Catalogue defined in Section 3.3 of the Game Plan
 class EventType:
-    # Player actions
+    # Player actions (Standard)
     JUMP = "JUMP"
     LAND = "LAND"
     DUCK = "DUCK"
@@ -14,9 +14,25 @@ class EventType:
     LEAN_RIGHT = "LEAN_RIGHT"
     LEAN_CENTER = "LEAN_CENTER"
     HANDS_UP = "HANDS_UP"
+    PUNCH = "PUNCH"
+    KICK = "KICK"
     STEP_LEFT = "STEP_LEFT"
     STEP_RIGHT = "STEP_RIGHT"
     POSE_MATCHED = "POSE_MATCHED"
+
+    # Comedic & Interactive Gestures
+    CHICKEN_FLAP = "CHICKEN_FLAP"         # Arm/elbow flapping flight glide
+    FART_BLAST = "FART_BLAST"             # Sideways hip bend monster repel
+    GIANT_STOMP = "GIANT_STOMP"           # Foot stomp screen shake
+    FLAMINGO_BALANCE = "FLAMINGO_BALANCE" # 1-legged rainbow balance
+    TICKLE_SWAT = "TICKLE_SWAT"           # Rapid hand waving tickle
+    GUEST_STAR = "GUEST_STAR"             # Family photobomb bonus
+
+    # Emotion Matching Actions
+    EMOTION_SMILE = "EMOTION_SMILE"
+    EMOTION_ANGRY = "EMOTION_ANGRY"
+    EMOTION_SURPRISED = "EMOTION_SURPRISED"
+    EMOTION_CRY = "EMOTION_CRY"
 
     # Player state
     PLAYER_DETECTED = "PLAYER_DETECTED"
@@ -50,7 +66,7 @@ class EventType:
     SPEED_CHANGED = "SPEED_CHANGED"
     STREAK_CHANGED = "STREAK_CHANGED"
 
-    # Profile
+    # Profile & Measurement
     PROFILE_SELECTED = "PROFILE_SELECTED"
     PROFILE_CREATED = "PROFILE_CREATED"
     PROFILE_UPDATED = "PROFILE_UPDATED"

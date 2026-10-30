@@ -29,6 +29,7 @@ kids_game/
 ├── engine
 │   ├── games
 │   │   ├── __init__.py
+│   │   ├── lane_switch.py
 │   │   └── runner.py
 │   ├── mechanics
 │   │   ├── __init__.py
@@ -49,6 +50,7 @@ kids_game/
 │   ├── __init__.py
 │   ├── test_action_detector.py
 │   ├── test_audio.py
+│   ├── test_camera_configurator.py
 │   ├── test_camera_manager.py
 │   ├── test_camera_supervisor.py
 │   ├── test_config.py
@@ -59,6 +61,7 @@ kids_game/
 │   ├── test_game_engine.py
 │   ├── test_game_runner.py
 │   ├── test_input_keyboard.py
+│   ├── test_lane_switch.py
 │   ├── test_logger.py
 │   ├── test_measurement_capture.py
 │   ├── test_mechanics.py
@@ -78,6 +81,7 @@ kids_game/
 ├── vision
 │   ├── __init__.py
 │   ├── action_detector.py
+│   ├── camera_configurator.py
 │   ├── camera_manager.py
 │   ├── camera_supervisor.py
 │   ├── debug_tools.py
