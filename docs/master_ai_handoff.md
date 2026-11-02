@@ -12,7 +12,7 @@
 - **Project Name:** Kids Motion Game
 - **Target Platform:** Python 3.12 (virtual environment `.venv`) on Windows 11 (Lenovo ThinkPad i5 12th gen, 8 GB RAM), PowerShell, VS Code
 - **Primary Outputs:** Xiaomi TV 43" (1080p pygame via HDMI in Game Mode) + HDMI audio, Floor Projector (Display 2 in Hybrid mode)
-- **Inputs:** Keyboard (Phase A/B fallback), Phone/Webcam (Xiaomi Poco X6 Pro, Poco X3 NFC via Iriun/DroidCam), Laptop Webcam (backup)
+- **Inputs:** Keyboard (fallback), Phone/Webcam (Xiaomi Poco X6 Pro, Poco X3 NFC via Iriun/DroidCam), Laptop Webcam (backup), Physical Toy Nerf Guns & Steering Wheels
 - **Repo:** private GitHub repo `nasiriqbal49/kids_game`, branch `main`, local folder `D:\kids_game`.
 - **Original PDF plan:** deleted from the repo by the owner. `docs/full_game_plan.md` and `docs/use_case_catalogue.md` are the only source of truth.
 
@@ -20,10 +20,10 @@
 - `core/logger.py`: rotating file logger (`logs/kidsgame.log`) + console; `setup_logging()` and `configure_from(cfg)` apply level, size and backup count from config; handlers closed properly on reconfigure.
 - `core/config.py`: JSON config with range/type validation (bool rejected for numbers), typo detection (`difflib`), `.bad` backup on malformed JSON or non-object JSON, CLI overrides (applied even after a broken file; strict bool parsing), volume vs `max_volume_cap` cross-check, `reload()` / `has_pending_changes()` / `apply_pending()` (live-safe keys apply immediately, the rest at next game start).
 - `config.json`: project root settings.
-- `core/events.py`: event catalogue and immutable `Event` dataclass with full standard, comedic gesture, and emotion action catalogue (`CHICKEN_FLAP`, `FART_BLAST`, `GIANT_STOMP`, `FLAMINGO_BALANCE`, `TICKLE_SWAT`, `GUEST_STAR`, `EMOTION_SMILE`, `EMOTION_ANGRY`, `EMOTION_SURPRISED`, `EMOTION_CRY`).
+- `core/events.py`: event catalogue and immutable `Event` dataclass with full standard, comedic gesture, toy recoil, and emotion action catalogue (`CHICKEN_FLAP`, `FART_BLAST`, `GIANT_STOMP`, `FLAMINGO_BALANCE`, `TICKLE_SWAT`, `GUEST_STAR`, `SHOOT`, `STEER_LEFT`, `STEER_RIGHT`, `POWER_BLAST`, `SHIELD_BLOCK`, `EMOTION_SMILE`, `EMOTION_ANGRY`, `EMOTION_SURPRISED`, `EMOTION_CRY`).
 - `core/event_bus.py`: pub/sub with catalogue enforcement, payload validation, subscriber error isolation (disabled after consecutive failures; success resets the count), thread-safe `post()`/`drain()` guarded by a lock, critical-event protection under congestion, debug tap with sampling, stale-event helper, time-limited shutdown flush.
 - `core/input_keyboard.py`: keyboard adapter (key-repeat suppression, duck hold, lean cancel, focus-loss reset, Ctrl for parent keys, config key bindings with fallback, camera-only mode switch, latency simulation through `bus.post()`, full keyboard shortcuts for all comedic actions).
-- `engine/display.py`: Pygame 1080p rendering surface targeted to TV (display index 1) with laptop screen fallback, surface-scaled HUD, photosensitivity limits (<= 3 flashes/sec), low FPS automatic degradation, 10-ft readable fonts, menu hold-to-select, and HDMI disconnect auto-pause + 3s countdown.
+- `engine/display.py`: Pygame 1080p rendering surface targeted to TV (display index 1) with laptop screen fallback, surface-scaled HUD, photosensitivity limits (<= 3 flashes/sec), low FPS automatic degradation, 10-ft readable fonts, menu hold-to-select, auto-scrolling menu viewport (supporting 50+ options without cutoff), and HDMI disconnect auto-pause + 3s countdown.
 - `engine/audio.py`: Pygame mixer with in-memory synthetic procedural waveform generator (sine/square) fallback, priority channels for hits/game-over, low-health warning buzzer, state-controlled running loop, and volume cap enforcement.
 - `engine/event_pump.py`: Central owner of the pygame event pump (Gap G10); routes window events to display and key events to input adapter.
 - `engine/game_engine.py`: Reusable game loop, state machine with legal transition enforcement, fixed-timestep accumulator with lag spike clamp, auto-pause on zone exit past 1.0s grace, speed ramping, error boundary, and idle timeout.
@@ -32,6 +32,8 @@
 - `engine/games/lane_switch.py`: Game 2: Coin Slalom & Lane Switch runner with lean boundary clamping, golden coin trails, and punch/kick crate smashing.
 - `engine/games/freeze_dance.py`: Game 3: Freeze Dance & Floor is Lava with music stop stillness checking and molten lava jumping/balance survival.
 - `engine/games/spooky_red_light.py`: Game 4: Spooky Red Light, Green Light with creeping distance progress, blackout power-cut lighting flickers, and monster jumpscare penalty.
+- `engine/tutorial_ui.py`: Motion Academy with procedural animated stickman demonstrations, live match accuracy percentage gauge (0-100%), real-time distance & camera framing advisor, and [Tab] Master Controls Cheat Sheet matrix.
+- `engine/motion_bridge.py`: Hardware controller bridge translating body actions, toy steering wheel turns, and Nerf recoil jerks into DirectInput scan codes and mouse clicks for Poki, CrazyGames, and PC games.
 - `vision/camera_manager.py`: Multi-threaded OpenCV capture, horizontal mirroring, auto-reconnect retry loop, stale frame detection, hardware discovery, and low FPS downscaling.
 - `vision/camera_supervisor.py`: Multi-camera supervisor managing the automatic fallback chain (`Phone -> Laptop Webcam -> Keyboard`), hot-plug re-promotion, and orientation locking (0°, 90°, 180°, 270°).
 - `vision/camera_configurator.py`: 3-camera role configurator wizard with live video feeds in all cards, conflict resolution, validation, and config persistence.
@@ -39,16 +41,17 @@
 - `vision/pose_tracker.py`: MediaPipe 33-point body tracking (pinned `mediapipe==0.10.14`), 150ms motion blur holdover, partial body check, child scale check, and fail-soft fallback.
 - `vision/zone_calibration.py`: 2D floor bounding box, foot-tracking, jump vertical immunity, edge warning band, and JSON persistence.
 - `vision/player_lock.py`: 0.5s stable presence lock, nearest-to-center multi-kid selection, bystander rejection, 2.0s occlusion grace, and body proportions tracking.
-- `vision/action_detector.py`: JUMP, LAND, DUCK, STAND, LEAN_LEFT, LEAN_RIGHT, LEAN_CENTER, HANDS_UP, PUNCH, KICK, CHICKEN_FLAP, FART_BLAST, FLAMINGO_BALANCE, TICKLE_SWAT with pre-jump crouch spring detection, ankle-lift tracking, and dynamic drift adaptation.
+- `vision/action_detector.py`: JUMP, LAND, DUCK, STAND, LEAN_LEFT, LEAN_RIGHT, LEAN_CENTER, HANDS_UP, PUNCH, KICK, SHOOT, STEER_LEFT, STEER_RIGHT, POWER_BLAST, SHIELD_BLOCK, CHICKEN_FLAP, FART_BLAST, FLAMINGO_BALANCE, TICKLE_SWAT with Nerf recoil detection, seated couch mode, and dynamic drift adaptation.
 - `identity/profile_manager.py`: Universal player profile database, atomic JSON save with rolling `.bak` backup, virtual coin economy wallet, per-game high scores, avatar customization, parent-confirmed deletion, and guest mode.
 - `identity/measurement_capture.py`: Guided superhero pose calibration, 2.0s stability filter, test jump apex tracking, implausible height guard, and parent manual entry fallback.
 - `identity/shop_manager.py`: Virtual Coin Shop, inventory carrying capacity, parent coin rewards, catalog editing, and 1-click Windows Explorer asset folder launcher.
 - `projection/projector_manager.py`: Module 19 floor projection manager, hybrid dual-screen rendering, 4-corner homography keystone warping, floor calibration grid, and display disconnect pause.
-- `Play_Kids_Game.bat`: 1-click Windows desktop batch launcher.
-- `tools/build_exe.py`: PyInstaller standalone executable builder.
+- `tools/motion_controller_app.py`: Standalone Universal Motion Game Controller companion app with 1-click portal links and floating mini-widget dock mode.
+- `Play_Kids_Game.bat` & `Launch_Motion_Controller.bat`: 1-click Windows desktop batch launchers.
+- `tools/build_exe.py` & `tools/build_controller_exe.py`: PyInstaller standalone executable builders.
 - `tools/show_tree.py`: regenerates the directory tree doc.
 - `tools/update_git_commits.py`: regenerates the commit log doc.
-- **Verified Unit Tests:** 215 unit tests across 25 test files, all passing.
+- **Verified Unit Tests:** 225 unit tests across 26 test files, all passing.
 
 ## 3. Strict Coding Rules
 1. **Pacing:** small, testable portions. No bloated multi-module scripts in a single step.
@@ -63,23 +66,21 @@
 ## 4. Current Exact State & Next Immediate Step
 
 ### Current State (2026-10-30)
-- **All 19 Modules from Full Game Plan Complete & Certified!**
-  - Phase A (Foundation): Modules 1, 2, 3 (43 tests).
-  - Phase B (Milestone M1 Keyboard Runner): Modules 4, 5, 6, 7, 8 (70 tests).
-  - Phase C (Milestone M2 Vision Pipeline): Modules 9, 10, 11, 12, 13, 14 (53 tests).
-  - Phase D (Milestone M3 Profiles & Measurement): Modules 15, 16 (19 tests).
-  - Phase E (Milestone M4 Phone Cameras & 3-Camera Configurator): Module 17 (9 tests).
-  - Phase E (Milestone M5 All 4 Arcade Games & Comedic Gestures): Module 18 (11 tests).
-  - Phase E (Milestone M6 Floor Projection & Keystone Warping): Module 19 (4 tests).
-  - Economy & Shop Suite: ShopManager (5 tests).
+- **All 19 Modules Complete, Certified & Expanded!**
+  - Phase A (Foundation): Modules 1, 2, 3 (44 tests).
+  - Phase B (Playable Game with Keyboard): Modules 4, 5, 6, 7, 8 (70 tests).
+  - Phase C (Computer Vision & Tracking): Modules 9, 10, 11, 12, 13, 14 (53 tests).
+  - Phase D (Identity & Measurement): Modules 15, 16 (19 tests).
+  - Phase E (Multi-Camera, Arcade Suite & Floor Prep): Modules 17, 18, 19 (24 tests).
+  - Economy, Shop Suite & Tutorial Academy: ShopManager, Motion Bridge, Tutorial Academy (15 tests).
 - **Live Playtest Verified:** Real child jump, duck, and lean tested live on 43" Xiaomi TV via USB phone camera. Multi-camera setup with 2 phones + laptop webcam verified.
-- **Launchers Ready:** `Play_Kids_Game.bat` (1-click desktop play) & `tools/build_exe.py` (standalone `.exe` builder).
-- **Total Test Suite:** **215 verified passing unit tests** across 25 test files (`python -m unittest discover -s tests -t . -v`).
+- **Total Test Suite:** **225 verified passing unit tests** across 26 test files (`python -m unittest discover -s tests -t . -v`).
 
 ### Next Immediate Step
-- The platform is fully built and ready for family play! 
-- Double-click `Play_Kids_Game.bat` to enjoy all 4 games on the TV with your children.
-- Run `python tools/build_exe.py` whenever you want to package `KidsMotionGame.exe` to share on a USB drive!
+- Platform is ready for active family play!
+- Double-click `Play_Kids_Game.bat` to play the 4 custom games.
+- Double-click `Launch_Motion_Controller.bat` to play Poki, CrazyGames, Temple Run 2, and Subway Surfers with toy Nerf guns, steering plates, and body movements!
+- Run `python tools/build_exe.py` or `python tools/build_controller_exe.py` whenever standalone `.exe` packages are desired.
 
 ### Known open items
 See "Known gaps and open items" in `docs/progress_tracker.md` (G1, G2, G4, G5 open).

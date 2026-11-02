@@ -41,7 +41,9 @@ kids_game/
 │   ├── audio.py
 │   ├── display.py
 │   ├── event_pump.py
-│   └── game_engine.py
+│   ├── game_engine.py
+│   ├── motion_bridge.py
+│   └── tutorial_ui.py
 ├── identity
 │   ├── __init__.py
 │   ├── measurement_capture.py
@@ -71,18 +73,22 @@ kids_game/
 │   ├── test_logger.py
 │   ├── test_measurement_capture.py
 │   ├── test_mechanics.py
+│   ├── test_motion_bridge.py
 │   ├── test_player_lock.py
 │   ├── test_pose_tracker.py
 │   ├── test_profile_manager.py
 │   ├── test_projector_manager.py
 │   ├── test_shop_manager.py
 │   ├── test_spooky_red_light.py
+│   ├── test_tutorial_ui.py
 │   └── test_zone_calibration.py
 ├── tools
+│   ├── build_controller_exe.py
 │   ├── build_exe.py
 │   ├── extract_module.py
 │   ├── inspect_cameras.py
 │   ├── make_session_diff.py
+│   ├── motion_controller_app.py
 │   ├── show_tree.py
 │   └── update_git_commits.py
 ├── user_data
@@ -107,6 +113,7 @@ kids_game/
 ├── .gitignore
 ├── .gitingestignore
 ├── config.json
+├── Launch_Motion_Controller.bat
 ├── main.py
 ├── module_10_spec.md
 ├── Play_Kids_Game.bat

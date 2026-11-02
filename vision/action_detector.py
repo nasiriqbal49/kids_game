@@ -44,11 +44,18 @@ class ActionDetector:
         self.duck_timer: float = 0.0
         self.max_duck_duration_sec: float = 5.0
 
+        # Tracking Mode: "FULL_BODY" (Standing 8-10ft) or "UPPER_BODY" (Seated/Couch 4-6ft)
+        self.tracking_mode: str = self.config.get("gameplay.tracking_mode", "FULL_BODY")
+
         # Sensitivity thresholds tuned for kids
         self.jump_threshold_ratio: float = 0.040
         self.jump_min_velocity: float = 0.065
         self.duck_threshold_ratio: float = 0.080
         self.ankle_jump_lift_ratio: float = 0.030
+
+        # Nerf Gun Recoil Tracker
+        self.last_recoil_y: Optional[float] = None
+        self.last_recoil_time: float = 0.0
 
         # Lean Hysteresis thresholds
         self.lean_enter_threshold: float = 0.025
@@ -239,13 +246,69 @@ class ActionDetector:
         if self.last_swat_time > 0 and (now - self.last_swat_time) > 0.8:
             self.swat_oscillations = 0
 
-        # -------------------------------------------------------------
-        # STANDARD 1: HANDS UP / PUNCH
+# -------------------------------------------------------------
+        # PUNCH, HANDS UP & GUN SHOOTING GESTURES
         # -------------------------------------------------------------
         if l_wrist and r_wrist and nose:
+            # 1. Hands Up (Both wrists above nose)
             if l_wrist.y < nose.y and r_wrist.y < nose.y:
                 self.debug_last_action = "HANDS_UP"
                 self.bus.post(Event(EventType.HANDS_UP, source="action_detector"))
+
+            # 2. Forward Punch (One wrist raised forward above hip and pushing forward)
+            wrist_height = min(l_wrist.y, r_wrist.y)
+            if wrist_height < (hip_y - 0.05) and (now - self.last_jump_time) > 0.30:
+                # Fast punch thrust
+                if abs(l_wrist.x - r_wrist.x) > 0.20:
+                    self.debug_last_action = "PUNCH"
+                    self.bus.post(Event(EventType.PUNCH, source="action_detector"))
+
+# -------------------------------------------------------------
+        # STEERING WHEEL, SHIELD BLOCK & POWER BLAST GESTURES
+        # -------------------------------------------------------------
+        if l_wrist and r_wrist:
+            # 1. Steering Wheel Rotation (Both hands out, rotated diagonally)
+            # Left hand up, Right hand down -> Steer Left
+            wrist_dy = l_wrist.y - r_wrist.y
+            if abs(wrist_dy) > 0.12 and abs(l_wrist.x - r_wrist.x) > 0.18:
+                if wrist_dy < -0.12:  # Left wrist higher than right
+                    self.debug_last_action = "STEER_LEFT"
+                    self.bus.post(Event(EventType.STEER_LEFT, source="action_detector"))
+                elif wrist_dy > 0.12: # Right wrist higher than left
+                    self.debug_last_action = "STEER_RIGHT"
+                    self.bus.post(Event(EventType.STEER_RIGHT, source="action_detector"))
+
+            # 2. X-Shield Block (Forearms crossed in front of chest)
+            if abs(l_wrist.x - r_wrist.x) < 0.06 and abs(l_wrist.y - r_wrist.y) < 0.06:
+                if l_wrist.y < (hip_y - 0.10):
+                    self.debug_last_action = "SHIELD_BLOCK"
+                    self.bus.post(Event(EventType.SHIELD_BLOCK, source="action_detector"))
+
+            # 3. Power Blast / Kamehameha (Double palm forward thrust)
+            if abs(l_wrist.y - r_wrist.y) < 0.05 and 0.14 < abs(l_wrist.x - r_wrist.x) < 0.28:
+                if l_wrist.y < (hip_y - 0.12):
+                    self.debug_last_action = "POWER_BLAST"
+                    self.bus.post(Event(EventType.POWER_BLAST, source="action_detector"))
+
+
+
+            # 3. Nerf Gun / Laser Blaster (Two hands gripping toy gun with upward recoil jerk!)
+            wrist_distance = abs(l_wrist.x - r_wrist.x)
+            avg_wrist_y = (l_wrist.y + r_wrist.y) / 2.0
+
+            # Hands holding toy gun in front of chest
+            if wrist_distance < 0.14 and avg_wrist_y < (hip_y - 0.08):
+                if self.last_recoil_y is not None:
+                    # Quick upward jerk / recoil pulse
+                    recoil_velocity = (self.last_recoil_y - avg_wrist_y) / dt
+                    if recoil_velocity > 0.18 and (now - self.last_recoil_time) > 0.22:
+                        self.last_recoil_time = now
+                        self.debug_last_action = "SHOOT"
+                        log.info("Action: NERF GUN RECOIL SHOT fired!")
+                        self.bus.post(Event(EventType.SHOOT, source="action_detector"))
+                self.last_recoil_y = avg_wrist_y
+            else:
+                self.last_recoil_y = None
 
         # -------------------------------------------------------------
         # STANDARD 2: JUMP and LAND Detection

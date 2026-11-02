@@ -1,9 +1,9 @@
 # Kids Motion Game - Development & Use-Case Progress Tracker
 
 **Last Updated:** 2026-10-30
-**Current Milestone Target:** ALL MILESTONES ACHIEVED (M1 through M6 Complete!)
-**Current Phase:** Phase E Complete (All 19 Modules Built & Certified)
-**Verified unit tests (from real output):** 215 run, 215 passing (verified 2026-10-30) (`python -m unittest discover -s tests -t . -v`)
+**Current Milestone Target:** ALL MILESTONES ACHIEVED (M1 through M6 Complete & Production Ready!)
+**Current Phase:** Phase E Complete (All 19 Modules Built, Certified & Expanded)
+**Verified unit tests (from real output):** 225 run, 225 passing (verified 2026-10-30) (`python -m unittest discover -s tests -t . -v`)
 
 > **Rule for this file:** a use case is "Pass" only if a test carrying its ID exists, runs, and passed in output pasted by the owner. A module is DONE only when every P1 and P2 use case has a passing test; any deferred use case is listed explicitly below. See `docs/AI_START_HERE.md`.
 
@@ -14,7 +14,7 @@
 | **1** | **Config and Logging** | **A** | **10** | **DONE (01.10 deferred, P3)** | 2026-10-28 | 9 of 10 verified, 20 tests (15 config, 5 logger). 01.10 privacy filter deferred (P3). |
 | **2** | **Event Bus** | **A** | **11** | **DONE** | 2026-10-28 | 11 of 11 verified, 13 tests. Thread-safe lock and failure reset verified. |
 | **3** | **Input Adapter (Keyboard)** | **A** | **9** | **DONE (03.07 partial)** | 2026-10-28 | 9 of 9 have tests, 11 tests. Full comedic shortcuts added. |
-| **4** | **Display and UI** | **B** | **13** | **DONE** | 2026-10-28 | 24 display tests (+6 pump). All 13 use cases verified. 1080p HUD scaling, low-health badge, HDMI disconnect pause & 3s countdown (04.03), menus (04.08, 04.09). |
+| **4** | **Display and UI** | **B** | **13** | **DONE** | 2026-10-28 | 24 display tests (+6 pump). All 13 use cases verified. Auto-scrolling menu viewport (50+ options), 1080p HUD scaling, low-health badge, HDMI disconnect pause & 3s countdown (04.03), menus (04.08, 04.09). |
 | **5** | **Audio Manager** | **B** | **10** | **DONE (05.09, 05.10 deferred, P3)** | 2026-10-28 | 7 tests. In-memory procedural synth (05.03), volume cap & mute (05.06), low-health alert state (05.07), pause/resume channels (05.08). |
 | **6** | **Game Engine Core** | **B** | **12** | **DONE (06.12 deferred, P3)** | 2026-10-28 | 11 tests. Fixed timestep loop (06.07), state transitions (06.01, 06.02), pause/resume (06.03, 06.04), zero health game over (06.05), difficulty ramp (06.06). |
 | **7** | **Game Mechanics Library** | **B** | **15** | **DONE** | 2026-10-28 | 15 tests. JUMP/DUCK/LEAN clears (07.01, 07.05, 07.14), damage & invulnerability (07.02, 07.03), powerups (07.06-07.09, 07.13), spawner spacing (07.10), streak (07.11). |
@@ -63,7 +63,9 @@
 | `tests/test_spooky_red_light.py` | 3 |
 | `tests/test_shop_manager.py` | 5 |
 | `tests/test_projector_manager.py` | 4 |
-| **Total** | **215** |
+| `tests/test_motion_bridge.py` | 4 |
+| `tests/test_tutorial_ui.py` | 5 |
+| **Total** | **225** |
 
 ---
 
@@ -327,6 +329,12 @@
   - `19.02` 4-corner keystone calibration and homography perspective warping: **Pass** (`test_19_02`)
   - `19.07` Projector disconnection in Hybrid mode triggers safety pause: **Pass** (`test_19_07`)
   - `19.11` Projector settings and corner coordinates persist to JSON: **Pass** (`test_19_11`)
+
+### Motion Controller & Academy Extensions
+- **Files:** `engine/motion_bridge.py`, `engine/tutorial_ui.py`, `tests/test_motion_bridge.py`, `tests/test_tutorial_ui.py` (9 tests)
+- **Features verified:**
+  - `motion_bridge`: DirectInput hardware scan code emission (< 1ms latency) for Up, Down, Left, Right, F, K, Z, X, Space, and Left Click (`test_motion_bridge.py`, 4 tests).
+  - `tutorial_ui`: Interactive Tutorial Academy, animated stickman demonstrations, live match accuracy (0-100%), distance advisor, and Master Controls Cheat Sheet matrix (`test_tutorial_ui.py`, 5 tests).
 
 ---
 
