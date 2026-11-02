@@ -1,0 +1,69 @@
+{
+  "version": "1.0",
+  "updated_at": 1793361920.6360648,
+  "items": [
+    {
+      "item_id": "shield",
+      "name": "Super Shield",
+      "category": "powerup",
+      "price": 30,
+      "description": "Absorbs 1 obstacle hit with zero damage!",
+      "icon_type": "builtin",
+      "custom_asset_path": null
+    },
+    {
+      "item_id": "wings_glider",
+      "name": "Turbo Wings",
+      "category": "powerup",
+      "price": 40,
+      "description": "Flap elbows like a chicken to glide in mid-air!",
+      "icon_type": "builtin",
+      "custom_asset_path": null
+    },
+    {
+      "item_id": "double_points",
+      "name": "Double Star Booster",
+      "category": "powerup",
+      "price": 25,
+      "description": "Doubles all points scored during your run!",
+      "icon_type": "builtin",
+      "custom_asset_path": null
+    },
+    {
+      "item_id": "slow_down",
+      "name": "Chill-Out Potion",
+      "category": "powerup",
+      "price": 20,
+      "description": "Slows world speed down to a gentle breeze.",
+      "icon_type": "builtin",
+      "custom_asset_path": null
+    },
+    {
+      "item_id": "sunglasses",
+      "name": "Cool Sunglasses",
+      "category": "accessory",
+      "price": 50,
+      "description": "Equips stylish sunglasses on your avatar.",
+      "icon_type": "builtin",
+      "custom_asset_path": null
+    },
+    {
+      "item_id": "monster_horns",
+      "name": "Monster Horns",
+      "category": "accessory",
+      "price": 60,
+      "description": "Grow wacky cartoon horns on your head!",
+      "icon_type": "builtin",
+      "custom_asset_path": null
+    },
+    {
+      "item_id": "party_hat",
+      "name": "Party Hat",
+      "category": "accessory",
+      "price": 35,
+      "description": "A festive party hat for high scorers.",
+      "icon_type": "builtin",
+      "custom_asset_path": null
+    }
+  ]
+}

@@ -79,12 +79,19 @@ kids_game/
 │   ├── test_spooky_red_light.py
 │   └── test_zone_calibration.py
 ├── tools
+│   ├── build_exe.py
 │   ├── extract_module.py
 │   ├── inspect_cameras.py
 │   ├── make_session_diff.py
 │   ├── show_tree.py
 │   └── update_git_commits.py
 ├── user_data
+│   ├── custom_assets
+│   │   ├── actions
+│   │   ├── monsters
+│   │   ├── photos
+│   │   └── powerups
+│   ├── catalog.json
 │   ├── profiles.json
 │   └── profiles.json.bak
 ├── vision
@@ -102,6 +109,7 @@ kids_game/
 ├── config.json
 ├── main.py
 ├── module_10_spec.md
+├── Play_Kids_Game.bat
 ├── requirements.txt
 └── session_diff.txt
 ```

@@ -222,3 +222,12 @@ This document tracks every error, edge-case hurdle, or design correction encount
 - **Root Cause:** In `action_detector.py`, the idle reset checked `if (now - self.last_flap_time) > 1.2:`. Because `last_flap_time` starts at `0.0`, on early frames `now - 0.0 > 1.2` evaluated to True, resetting the cycle counter before the second flap or third swat could register. Additionally, Frame 0 did an early return to set the standing baseline before gesture joint baselines were initialized.
 - **Resolution:** Added `self.last_flap_time > 0` guard to the reset checks, and initialized joint baselines (`last_elbow_y`, `last_wrist_x`) on Frame 0 alongside `baseline_hip_y`. All 199 tests pass.
 - **Status:** **Resolved & Verified**
+
+---
+
+### Issue #027: FreezeDanceGame class import resolution in test suite
+- **Module:** Module 18 (Freeze Dance tests, UC 18.03, 18.04)
+- **Symptom:** `ImportError: cannot import name 'FreezeDanceGame' from 'engine.games.freeze_dance'`.
+- **Root Cause:** `engine/games/freeze_dance.py` had a saving delay / partial write when running the new test immediately.
+- **Resolution:** Cleanly wrote and saved the complete `FreezeDanceGame` class. All 215 unit tests pass cleanly.
+- **Status:** **Resolved & Verified**

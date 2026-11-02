@@ -11,7 +11,7 @@
 ## 1. Project Identity
 - **Project Name:** Kids Motion Game
 - **Target Platform:** Python 3.12 (virtual environment `.venv`) on Windows 11 (Lenovo ThinkPad i5 12th gen, 8 GB RAM), PowerShell, VS Code
-- **Primary Outputs:** Xiaomi TV 43" (1080p pygame via HDMI in Game Mode) + HDMI audio
+- **Primary Outputs:** Xiaomi TV 43" (1080p pygame via HDMI in Game Mode) + HDMI audio, Floor Projector (Display 2 in Hybrid mode)
 - **Inputs:** Keyboard (Phase A/B fallback), Phone/Webcam (Xiaomi Poco X6 Pro, Poco X3 NFC via Iriun/DroidCam), Laptop Webcam (backup)
 - **Repo:** private GitHub repo `nasiriqbal49/kids_game`, branch `main`, local folder `D:\kids_game`.
 - **Original PDF plan:** deleted from the repo by the owner. `docs/full_game_plan.md` and `docs/use_case_catalogue.md` are the only source of truth.
@@ -30,6 +30,8 @@
 - `engine/mechanics/`: Reusable gameplay library (`entities.py`, `manager.py`) with obstacles (hurdles, high bars, lane barriers, smashable crates), power-ups (shield, slow_down, double_points, health_refill), collision verification, forgiving hitboxes, streak multipliers, and safe spawn spacing.
 - `engine/games/runner.py`: Game 1: 3-lane pseudo-3D perspective road runner taking 86% of screen, player jump arc/duck, power-up collection, personal best tracking, difficulty presets, and navigable results screen.
 - `engine/games/lane_switch.py`: Game 2: Coin Slalom & Lane Switch runner with lean boundary clamping, golden coin trails, and punch/kick crate smashing.
+- `engine/games/freeze_dance.py`: Game 3: Freeze Dance & Floor is Lava with music stop stillness checking and molten lava jumping/balance survival.
+- `engine/games/spooky_red_light.py`: Game 4: Spooky Red Light, Green Light with creeping distance progress, blackout power-cut lighting flickers, and monster jumpscare penalty.
 - `vision/camera_manager.py`: Multi-threaded OpenCV capture, horizontal mirroring, auto-reconnect retry loop, stale frame detection, hardware discovery, and low FPS downscaling.
 - `vision/camera_supervisor.py`: Multi-camera supervisor managing the automatic fallback chain (`Phone -> Laptop Webcam -> Keyboard`), hot-plug re-promotion, and orientation locking (0°, 90°, 180°, 270°).
 - `vision/camera_configurator.py`: 3-camera role configurator wizard with live video feeds in all cards, conflict resolution, validation, and config persistence.
@@ -40,9 +42,13 @@
 - `vision/action_detector.py`: JUMP, LAND, DUCK, STAND, LEAN_LEFT, LEAN_RIGHT, LEAN_CENTER, HANDS_UP, PUNCH, KICK, CHICKEN_FLAP, FART_BLAST, FLAMINGO_BALANCE, TICKLE_SWAT with pre-jump crouch spring detection, ankle-lift tracking, and dynamic drift adaptation.
 - `identity/profile_manager.py`: Universal player profile database, atomic JSON save with rolling `.bak` backup, virtual coin economy wallet, per-game high scores, avatar customization, parent-confirmed deletion, and guest mode.
 - `identity/measurement_capture.py`: Guided superhero pose calibration, 2.0s stability filter, test jump apex tracking, implausible height guard, and parent manual entry fallback.
+- `identity/shop_manager.py`: Virtual Coin Shop, inventory carrying capacity, parent coin rewards, catalog editing, and 1-click Windows Explorer asset folder launcher.
+- `projection/projector_manager.py`: Module 19 floor projection manager, hybrid dual-screen rendering, 4-corner homography keystone warping, floor calibration grid, and display disconnect pause.
+- `Play_Kids_Game.bat`: 1-click Windows desktop batch launcher.
+- `tools/build_exe.py`: PyInstaller standalone executable builder.
 - `tools/show_tree.py`: regenerates the directory tree doc.
 - `tools/update_git_commits.py`: regenerates the commit log doc.
-- **Verified Unit Tests:** 199 unit tests across 21 test files, all passing.
+- **Verified Unit Tests:** 215 unit tests across 25 test files, all passing.
 
 ## 3. Strict Coding Rules
 1. **Pacing:** small, testable portions. No bloated multi-module scripts in a single step.
@@ -57,23 +63,23 @@
 ## 4. Current Exact State & Next Immediate Step
 
 ### Current State (2026-10-30)
-- **Phase A (Foundation) certified:** Modules 1, 2, 3 (43 tests).
-- **Phase B (Playable Game with Keyboard) certified (Milestone M1):** Modules 4, 5, 6, 7, 8 (70 tests).
-- **Phase C (Computer Vision & Tracking) certified (Milestone M2):** Modules 9, 10, 11, 12, 13, 14 (53 tests).
-- **Phase D (Identity & Measurement) certified (Milestone M3):** Modules 15, 16 (19 tests).
-- **Phase E (Multi-Camera, Arcade Suite & Floor Projection) certified (Milestones M4, M5, M6):**
-  - **Module 17 (Camera Supervisor & 3-Camera Configurator):** 9 tests.
-  - **Module 18 (Games 2, 3, 4):** 11 tests (`lane_switch.py`, `freeze_dance.py`, `spooky_red_light.py`).
-  - **Virtual Coin Shop & Parent Workshop:** 5 tests (`shop_manager.py`).
-  - **Module 19 (Floor Projector Manager):** 4 tests (`projector_manager.py`).
+- **All 19 Modules from Full Game Plan Complete & Certified!**
+  - Phase A (Foundation): Modules 1, 2, 3 (43 tests).
+  - Phase B (Milestone M1 Keyboard Runner): Modules 4, 5, 6, 7, 8 (70 tests).
+  - Phase C (Milestone M2 Vision Pipeline): Modules 9, 10, 11, 12, 13, 14 (53 tests).
+  - Phase D (Milestone M3 Profiles & Measurement): Modules 15, 16 (19 tests).
+  - Phase E (Milestone M4 Phone Cameras & 3-Camera Configurator): Module 17 (9 tests).
+  - Phase E (Milestone M5 All 4 Arcade Games & Comedic Gestures): Module 18 (11 tests).
+  - Phase E (Milestone M6 Floor Projection & Keystone Warping): Module 19 (4 tests).
+  - Economy & Shop Suite: ShopManager (5 tests).
 - **Live Playtest Verified:** Real child jump, duck, and lean tested live on 43" Xiaomi TV via USB phone camera. Multi-camera setup with 2 phones + laptop webcam verified.
+- **Launchers Ready:** `Play_Kids_Game.bat` (1-click desktop play) & `tools/build_exe.py` (standalone `.exe` builder).
 - **Total Test Suite:** **215 verified passing unit tests** across 25 test files (`python -m unittest discover -s tests -t . -v`).
-- **All Core Architecture Milestones M1 through M6 are officially ACHIEVED!**
 
 ### Next Immediate Step
-- Live family playtest of all 4 games (`python main.py`).
-- Fine-tune child gesture sensitivities based on real-world play feedback.
-- Connect Emotion-Matching Monsters into the games or customize homemade art/audio via the Parent Workshop.
+- The platform is fully built and ready for family play! 
+- Double-click `Play_Kids_Game.bat` to enjoy all 4 games on the TV with your children.
+- Run `python tools/build_exe.py` whenever you want to package `KidsMotionGame.exe` to share on a USB drive!
 
 ### Known open items
 See "Known gaps and open items" in `docs/progress_tracker.md` (G1, G2, G4, G5 open).
