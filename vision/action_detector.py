@@ -1,5 +1,6 @@
 import time
 from typing import Dict, Optional, Tuple, List
+from collections import deque
 from core.events import Event, EventType
 from core.event_bus import EventBus, get_event_bus
 from core.config import Config, get_config
@@ -11,16 +12,15 @@ log = get_logger("action_detector")
 
 class ActionDetector:
     """
-    Converts 33-point body landmarks into game action events.
-    Detects JUMP, LAND, DUCK, STAND, LEAN_LEFT, LEAN_RIGHT, LEAN_CENTER, HANDS_UP,
-    plus Comedic Gestures: CHICKEN_FLAP, FART_BLAST, FLAMINGO_BALANCE, TICKLE_SWAT, GIANT_STOMP.
+    Converts 33-point body landmarks into game actions.
+    Features velocity smoothing (eliminates vel=31.3 spikes) and deliberate arm aim
+    for Nerf recoil (eliminates desk mouse/typing false triggers).
     """
 
     def __init__(self, bus: Optional[EventBus] = None, cfg: Optional[Config] = None):
         self.bus = bus or get_event_bus()
         self.config = cfg or get_config()
 
-        # Dynamic Standing Baselines
         self.baseline_hip_y: Optional[float] = None
         self.baseline_ankle_y: Optional[float] = None
         self.baseline_body_height: float = 0.55
@@ -28,40 +28,32 @@ class ActionDetector:
         self.lowest_hip_in_crouch: Optional[float] = None
         self.last_timestamp: float = 0.0
 
-        # State Machines
+        # Velocity smoothing deque
+        self.velocity_history = deque(maxlen=3)
+
         self.is_airborne: bool = False
         self.is_ducking: bool = False
         self.current_lean: str = EventType.LEAN_CENTER
 
-        # Debug metrics for live display
         self.debug_vertical_rise: float = 0.0
         self.debug_velocity: float = 0.0
         self.debug_last_action: str = "STAND"
 
-        # Timers & Cooldowns
         self.jump_refractory_sec: float = 0.45
         self.last_jump_time: float = 0.0
         self.duck_timer: float = 0.0
         self.max_duck_duration_sec: float = 5.0
 
-        # Tracking Mode: "FULL_BODY" (Standing 8-10ft) or "UPPER_BODY" (Seated/Couch 4-6ft)
-        self.tracking_mode: str = self.config.get("gameplay.tracking_mode", "FULL_BODY")
-
-        # Sensitivity thresholds tuned for kids
+        # Calibrated sensitivity ratios
         self.jump_threshold_ratio: float = 0.040
         self.jump_min_velocity: float = 0.065
         self.duck_threshold_ratio: float = 0.080
         self.ankle_jump_lift_ratio: float = 0.030
 
-        # Nerf Gun Recoil Tracker
-        self.last_recoil_y: Optional[float] = None
-        self.last_recoil_time: float = 0.0
-
-        # Lean Hysteresis thresholds
         self.lean_enter_threshold: float = 0.025
         self.lean_exit_threshold: float = 0.012
 
-        # Comedic Gesture Tracking State
+        # Comedic state
         self.last_elbow_y: Optional[float] = None
         self.flap_count: int = 0
         self.last_flap_time: float = 0.0
@@ -73,6 +65,9 @@ class ActionDetector:
         self.swat_oscillations: int = 0
         self.last_wrist_x: Optional[float] = None
         self.last_swat_time: float = 0.0
+
+        self.last_recoil_y: Optional[float] = None
+        self.last_recoil_time: float = 0.0
 
         self._subscribe_events()
 
@@ -102,9 +97,9 @@ class ActionDetector:
         self.balance_emitted = False
 
     def process_pose(self, pose: PoseResult, timestamp: Optional[float] = None) -> None:
-        """Main detection step for standard and comedic gestures."""
         now = timestamp if timestamp is not None else time.time()
-        dt = max(0.001, now - self.last_timestamp) if self.last_timestamp > 0 else 0.033
+        raw_dt = now - self.last_timestamp if self.last_timestamp > 0 else 0.033
+        dt = max(0.015, raw_dt)
         self.last_timestamp = now
 
         if not pose.has_person or not pose.landmarks:
@@ -129,7 +124,6 @@ class ActionDetector:
         hip_y = (l_hip.y + r_hip.y) / 2.0
         sh_x = (l_sh.x + r_sh.x) / 2.0
         hip_x = (l_hip.x + r_hip.x) / 2.0
-        sh_y = (l_sh.y + r_sh.y) / 2.0
 
         current_ankle_y = None
         if l_ankle and r_ankle:
@@ -140,7 +134,7 @@ class ActionDetector:
         if nose and current_ankle_y is not None:
             self.baseline_body_height = max(0.20, abs(current_ankle_y - nose.y))
 
-        # Dynamic Standing Baselines & Joint Initialization on Frame 0
+        # Initialize Frame 0
         if self.baseline_hip_y is None:
             self.baseline_hip_y = hip_y
             self.last_hip_y = hip_y
@@ -156,7 +150,11 @@ class ActionDetector:
             self.baseline_ankle_y = current_ankle_y
 
         vertical_rise = self.baseline_hip_y - hip_y
-        vertical_velocity = (self.last_hip_y - hip_y) / dt if self.last_hip_y is not None else 0.0
+
+        # Velocity with 3-frame rolling average smoothing
+        raw_vel = (self.last_hip_y - hip_y) / dt if self.last_hip_y is not None else 0.0
+        self.velocity_history.append(raw_vel)
+        vertical_velocity = sum(self.velocity_history) / len(self.velocity_history)
         self.last_hip_y = hip_y
 
         self.debug_vertical_rise = vertical_rise
@@ -176,7 +174,7 @@ class ActionDetector:
                 self.baseline_ankle_y = (self.baseline_ankle_y * 0.96) + (current_ankle_y * 0.04)
 
         # -------------------------------------------------------------
-        # COMEDIC GESTURE 1: CHICKEN FLAP (Wings Glide Flight)
+        # 1. CHICKEN FLAP WINGS
         # -------------------------------------------------------------
         if l_elbow and r_elbow:
             avg_elbow_y = (l_elbow.y + r_elbow.y) / 2.0
@@ -188,7 +186,6 @@ class ActionDetector:
                     if self.flap_count >= 2:
                         self.flap_count = 0
                         self.debug_last_action = "CHICKEN_FLAP"
-                        log.info("Comedic Action: CHICKEN_FLAP wing glide detected!")
                         self.bus.post(Event(EventType.CHICKEN_FLAP, source="action_detector"))
             self.last_elbow_y = avg_elbow_y
 
@@ -196,7 +193,7 @@ class ActionDetector:
             self.flap_count = 0
 
         # -------------------------------------------------------------
-        # COMEDIC GESTURE 2: FART BLAST POSE
+        # 2. FART BLAST POSE
         # -------------------------------------------------------------
         if not self.is_airborne and current_ankle_y is not None:
             ankle_x = (l_ankle.x + r_ankle.x) / 2.0 if (l_ankle and r_ankle) else hip_x
@@ -206,11 +203,10 @@ class ActionDetector:
             if hip_side_shift > 0.070 and is_crouched and (now - self.last_fart_time) > 1.5:
                 self.last_fart_time = now
                 self.debug_last_action = "FART_BLAST"
-                log.info("Comedic Action: FART_BLAST green cloud detected!")
                 self.bus.post(Event(EventType.FART_BLAST, source="action_detector"))
 
         # -------------------------------------------------------------
-        # COMEDIC GESTURE 3: FLAMINGO 1-LEG BALANCE
+        # 3. FLAMINGO BALANCE
         # -------------------------------------------------------------
         if l_ankle and r_ankle and not self.is_airborne:
             ankle_split_y = abs(l_ankle.y - r_ankle.y)
@@ -219,14 +215,13 @@ class ActionDetector:
                 if self.balance_timer >= 1.0 and not self.balance_emitted:
                     self.balance_emitted = True
                     self.debug_last_action = "FLAMINGO_BALANCE"
-                    log.info("Comedic Action: FLAMINGO_BALANCE 1-leg hold completed!")
                     self.bus.post(Event(EventType.FLAMINGO_BALANCE, source="action_detector"))
             else:
                 self.balance_timer = 0.0
                 self.balance_emitted = False
 
         # -------------------------------------------------------------
-        # COMEDIC GESTURE 4: TICKLE SWAT (Rapid Hand Waving)
+        # 4. TICKLE SWAT
         # -------------------------------------------------------------
         if l_wrist and r_wrist and nose:
             if l_wrist.y < hip_y and r_wrist.y < hip_y:
@@ -239,79 +234,56 @@ class ActionDetector:
                         if self.swat_oscillations >= 3:
                             self.swat_oscillations = 0
                             self.debug_last_action = "TICKLE_SWAT"
-                            log.info("Comedic Action: TICKLE_SWAT rapid waving detected!")
                             self.bus.post(Event(EventType.TICKLE_SWAT, source="action_detector"))
                 self.last_wrist_x = avg_wrist_x
 
         if self.last_swat_time > 0 and (now - self.last_swat_time) > 0.8:
             self.swat_oscillations = 0
 
-# -------------------------------------------------------------
-        # PUNCH, HANDS UP & GUN SHOOTING GESTURES
         # -------------------------------------------------------------
-        if l_wrist and r_wrist and nose:
-            # 1. Hands Up (Both wrists above nose)
-            if l_wrist.y < nose.y and r_wrist.y < nose.y:
-                self.debug_last_action = "HANDS_UP"
-                self.bus.post(Event(EventType.HANDS_UP, source="action_detector"))
-
-            # 2. Forward Punch (One wrist raised forward above hip and pushing forward)
-            wrist_height = min(l_wrist.y, r_wrist.y)
-            if wrist_height < (hip_y - 0.05) and (now - self.last_jump_time) > 0.30:
-                # Fast punch thrust
-                if abs(l_wrist.x - r_wrist.x) > 0.20:
-                    self.debug_last_action = "PUNCH"
-                    self.bus.post(Event(EventType.PUNCH, source="action_detector"))
-
-# -------------------------------------------------------------
-        # STEERING WHEEL, SHIELD BLOCK & POWER BLAST GESTURES
+        # 5. NERF GUN RECOIL (With Desk Mouse / Typing False-Trigger Guard!)
         # -------------------------------------------------------------
         if l_wrist and r_wrist:
-            # 1. Steering Wheel Rotation (Both hands out, rotated diagonally)
-            # Left hand up, Right hand down -> Steer Left
-            wrist_dy = l_wrist.y - r_wrist.y
-            if abs(wrist_dy) > 0.12 and abs(l_wrist.x - r_wrist.x) > 0.18:
-                if wrist_dy < -0.12:  # Left wrist higher than right
-                    self.debug_last_action = "STEER_LEFT"
-                    self.bus.post(Event(EventType.STEER_LEFT, source="action_detector"))
-                elif wrist_dy > 0.12: # Right wrist higher than left
-                    self.debug_last_action = "STEER_RIGHT"
-                    self.bus.post(Event(EventType.STEER_RIGHT, source="action_detector"))
-
-            # 2. X-Shield Block (Forearms crossed in front of chest)
-            if abs(l_wrist.x - r_wrist.x) < 0.06 and abs(l_wrist.y - r_wrist.y) < 0.06:
-                if l_wrist.y < (hip_y - 0.10):
-                    self.debug_last_action = "SHIELD_BLOCK"
-                    self.bus.post(Event(EventType.SHIELD_BLOCK, source="action_detector"))
-
-            # 3. Power Blast / Kamehameha (Double palm forward thrust)
-            if abs(l_wrist.y - r_wrist.y) < 0.05 and 0.14 < abs(l_wrist.x - r_wrist.x) < 0.28:
-                if l_wrist.y < (hip_y - 0.12):
-                    self.debug_last_action = "POWER_BLAST"
-                    self.bus.post(Event(EventType.POWER_BLAST, source="action_detector"))
-
-
-
-            # 3. Nerf Gun / Laser Blaster (Two hands gripping toy gun with upward recoil jerk!)
             wrist_distance = abs(l_wrist.x - r_wrist.x)
             avg_wrist_y = (l_wrist.y + r_wrist.y) / 2.0
+            # Guard: Must be raised above hip level pointing at screen (not resting on desk keyboard)
+            is_aiming_posture = (wrist_distance < 0.14) and (avg_wrist_y < (hip_y - 0.12))
 
-            # Hands holding toy gun in front of chest
-            if wrist_distance < 0.14 and avg_wrist_y < (hip_y - 0.08):
+            if is_aiming_posture:
                 if self.last_recoil_y is not None:
-                    # Quick upward jerk / recoil pulse
                     recoil_velocity = (self.last_recoil_y - avg_wrist_y) / dt
-                    if recoil_velocity > 0.18 and (now - self.last_recoil_time) > 0.22:
+                    if recoil_velocity > 0.20 and (now - self.last_recoil_time) > 0.25:
                         self.last_recoil_time = now
                         self.debug_last_action = "SHOOT"
-                        log.info("Action: NERF GUN RECOIL SHOT fired!")
+                        log.info("Action: NERF RECOIL SHOT fired!")
                         self.bus.post(Event(EventType.SHOOT, source="action_detector"))
                 self.last_recoil_y = avg_wrist_y
             else:
                 self.last_recoil_y = None
 
         # -------------------------------------------------------------
-        # STANDARD 2: JUMP and LAND Detection
+        # 6. STEERING WHEEL
+        # -------------------------------------------------------------
+        if l_wrist and r_wrist:
+            wrist_dy = l_wrist.y - r_wrist.y
+            if abs(wrist_dy) > 0.12 and abs(l_wrist.x - r_wrist.x) > 0.18:
+                if wrist_dy < -0.12:
+                    self.debug_last_action = "STEER_LEFT"
+                    self.bus.post(Event(EventType.STEER_LEFT, source="action_detector"))
+                elif wrist_dy > 0.12:
+                    self.debug_last_action = "STEER_RIGHT"
+                    self.bus.post(Event(EventType.STEER_RIGHT, source="action_detector"))
+
+        # -------------------------------------------------------------
+        # 7. HANDS UP / PUNCH
+        # -------------------------------------------------------------
+        if l_wrist and r_wrist and nose:
+            if l_wrist.y < nose.y and r_wrist.y < nose.y:
+                self.debug_last_action = "HANDS_UP"
+                self.bus.post(Event(EventType.HANDS_UP, source="action_detector"))
+
+        # -------------------------------------------------------------
+        # 8. JUMP and LAND Detection
         # -------------------------------------------------------------
         jump_threshold = self.jump_threshold_ratio * self.baseline_body_height
         ankle_threshold = self.ankle_jump_lift_ratio * self.baseline_body_height
@@ -346,7 +318,7 @@ class ActionDetector:
                 self.bus.post(Event(EventType.LAND, source="action_detector"))
 
         # -------------------------------------------------------------
-        # STANDARD 3: DUCK and STAND Detection
+        # 9. DUCK and STAND Detection
         # -------------------------------------------------------------
         duck_threshold = self.duck_threshold_ratio * self.baseline_body_height
 
@@ -377,10 +349,9 @@ class ActionDetector:
                 self.bus.post(Event(EventType.STAND, source="action_detector"))
 
         # -------------------------------------------------------------
-        # STANDARD 4: LEAN LEFT / RIGHT / CENTER
+        # 10. LEAN LEFT / RIGHT / CENTER
         # -------------------------------------------------------------
         torso_tilt = sh_x - hip_x
-
         new_lean = self.current_lean
 
         if self.current_lean == EventType.LEAN_CENTER:

@@ -41,6 +41,23 @@ ARCADE_PORTALS: Dict[str, str] = {
     "zombie_derby": "https://www.crazygames.com/game/zombie-derby",
 }
 
+# Minimum seconds between two sends of the same action. Gestures such as PUNCH,
+# STEER and SHIELD_BLOCK are detected on every camera frame while the pose is
+# held (~30 times per second); without a cooldown they would spam the game.
+DEFAULT_ACTION_COOLDOWNS: Dict[str, float] = {
+    "UP": 0.30,
+    "DOWN": 0.15,
+    "LEFT": 0.25,
+    "RIGHT": 0.25,
+    "PUNCH": 0.35,
+    "KICK": 0.35,
+    "SHOOT": 0.25,
+    "POWER_BLAST": 0.60,
+    "SHIELD_BLOCK": 0.60,
+}
+
+KNOWN_ACTIONS = frozenset(DEFAULT_ACTION_COOLDOWNS.keys())
+
 
 def press_and_release_scancode(scancode: int, duration_sec: float = 0.08) -> None:
     if os.name != "nt":
@@ -69,15 +86,25 @@ class MotionControllerBridge:
     Universal Hardware Controller Bridge:
     Translates body actions, steering gestures, punches, kicks, and shooting into
     real hardware keystrokes and mouse clicks for any PC/Web game.
+
+    Keystrokes go to whichever window currently has keyboard focus, so the game
+    window must be the foreground window while playing.
     """
 
     def __init__(self, bus: Optional[EventBus] = None, cfg: Optional[Config] = None,
                  key_emitter: Optional[Callable[[int], None]] = None,
-                 click_emitter: Optional[Callable[[], None]] = None):
+                 click_emitter: Optional[Callable[[], None]] = None,
+                 cooldowns: Optional[Dict[str, float]] = None,
+                 clock: Optional[Callable[[], float]] = None):
         self.bus = bus or get_event_bus()
         self.config = cfg or get_config()
         self.key_emitter = key_emitter or press_and_release_scancode
         self.click_emitter = click_emitter or simulate_mouse_click
+
+        # Pass cooldowns={} to disable rate limiting (useful in unit tests).
+        self.cooldowns: Dict[str, float] = dict(DEFAULT_ACTION_COOLDOWNS) if cooldowns is None else dict(cooldowns)
+        self._clock: Callable[[], float] = clock or time.monotonic
+        self._last_sent: Dict[str, float] = {}
 
         self.enabled: bool = False
         self.active_external_portal: Optional[str] = None
@@ -96,8 +123,26 @@ class MotionControllerBridge:
         self.bus.subscribe(EventType.POWER_BLAST, lambda e: self.send_action("POWER_BLAST"))
         self.bus.subscribe(EventType.SHIELD_BLOCK, lambda e: self.send_action("SHIELD_BLOCK"))
 
+    def _cooldown_ok(self, action: str) -> bool:
+        """Returns True if enough time passed since the last send of this action."""
+        min_gap = self.cooldowns.get(action, 0.0)
+        if min_gap <= 0.0:
+            return True
+        now = self._clock()
+        last = self._last_sent.get(action)
+        if last is not None and (now - last) < min_gap:
+            return False
+        self._last_sent[action] = now
+        return True
+
     def send_action(self, action: str) -> bool:
         if not self.enabled:
+            return False
+
+        if action not in KNOWN_ACTIONS:
+            return False
+
+        if not self._cooldown_ok(action):
             return False
 
         if action == "UP":
@@ -135,6 +180,7 @@ class MotionControllerBridge:
     def launch_portal_or_game(self, portal_key: str) -> bool:
         url = ARCADE_PORTALS.get(portal_key, portal_key)
         self.enabled = True
+        self._last_sent.clear()
         self.active_external_portal = portal_key
         log.info("Motion Bridge activated! Launching %s (%s)...", portal_key, url)
         try:
@@ -144,7 +190,18 @@ class MotionControllerBridge:
             log.error("Failed opening browser: %s", err)
             return False
 
+    def start_background_mode(self) -> None:
+        """
+        Enables the bridge WITHOUT opening any browser page. Gestures are sent to
+        whichever window has focus, so any game or site can be opened manually.
+        """
+        self.enabled = True
+        self._last_sent.clear()
+        self.active_external_portal = "background"
+        log.info("Motion Bridge activated in BACKGROUND mode (no browser launched).")
+
     def stop_bridge(self) -> None:
         self.enabled = False
         self.active_external_portal = None
+        self._last_sent.clear()
         log.info("Motion Controller Bridge disabled.")

@@ -1,9 +1,9 @@
 # Kids Motion Game - Development & Use-Case Progress Tracker
 
-**Last Updated:** 2026-10-30
+**Last Updated:** 2026-11-02
 **Current Milestone Target:** ALL MILESTONES ACHIEVED (M1 through M6 Complete & Production Ready!)
 **Current Phase:** Phase E Complete (All 19 Modules Built, Certified & Expanded)
-**Verified unit tests (from real output):** 225 run, 225 passing (verified 2026-10-30) (`python -m unittest discover -s tests -t . -v`)
+**Verified unit tests (from real output):** 225 run, 225 passing (verified 2026-11-02) (`python -m unittest discover -s tests -t . -v`)
 
 > **Rule for this file:** a use case is "Pass" only if a test carrying its ID exists, runs, and passed in output pasted by the owner. A module is DONE only when every P1 and P2 use case has a passing test; any deferred use case is listed explicitly below. See `docs/AI_START_HERE.md`.
 
@@ -34,7 +34,7 @@
 
 ---
 
-## Test counts by file (verified 2026-10-30)
+## Test counts by file (verified 2026-11-02)
 
 | Test file | Tests |
 |---|---|
@@ -330,11 +330,12 @@
   - `19.07` Projector disconnection in Hybrid mode triggers safety pause: **Pass** (`test_19_07`)
   - `19.11` Projector settings and corner coordinates persist to JSON: **Pass** (`test_19_11`)
 
-### Motion Controller & Academy Extensions
-- **Files:** `engine/motion_bridge.py`, `engine/tutorial_ui.py`, `tests/test_motion_bridge.py`, `tests/test_tutorial_ui.py` (9 tests)
+### Motion Controller, Academy & Tools
+- **Files:** `engine/motion_bridge.py`, `engine/tutorial_ui.py`, `tools/calibrate_session.py`, `tests/test_motion_bridge.py`, `tests/test_tutorial_ui.py` (9 tests)
 - **Features verified:**
   - `motion_bridge`: DirectInput hardware scan code emission (< 1ms latency) for Up, Down, Left, Right, F, K, Z, X, Space, and Left Click (`test_motion_bridge.py`, 4 tests).
   - `tutorial_ui`: Interactive Tutorial Academy, animated stickman demonstrations, live match accuracy (0-100%), distance advisor, and Master Controls Cheat Sheet matrix (`test_tutorial_ui.py`, 5 tests).
+  - `calibrate_session`: 4-stage guided studio with live neon skeleton overlay, physical scale calculation (cm), and automated report archiving into `reports/`.
 
 ---
 

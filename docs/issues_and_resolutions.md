@@ -231,3 +231,12 @@ This document tracks every error, edge-case hurdle, or design correction encount
 - **Root Cause:** `engine/games/freeze_dance.py` had a saving delay / partial write when running the new test immediately.
 - **Resolution:** Cleanly wrote and saved the complete `FreezeDanceGame` class. All 215 unit tests pass cleanly.
 - **Status:** **Resolved & Verified**
+
+---
+
+### Issue #028: KeyError 'body_height_norm' in calibrate_session.py on early exit
+- **Module:** Tools (`tools/calibrate_session.py`)
+- **Symptom:** `KeyError: 'body_height_norm'` on line 423 when generating report if calibration was exited early or before full-body detection locked.
+- **Root Cause:** `"body_height_norm"` was only inserted into metadata during active detection rather than initialized with a safe default.
+- **Resolution:** Initialized `"body_height_norm": 0.55` in metadata dictionary and used `.get("body_height_norm", 0.55)` defensively. Added automated unique-name archival into a dedicated `reports/` directory.
+- **Status:** **Resolved & Verified**

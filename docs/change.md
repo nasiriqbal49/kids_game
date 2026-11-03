@@ -8,6 +8,29 @@
 ---
 
 
+## [2026-11-02 18:45] Session: `gemini-nasir-2026-11-02-session-calibration`
+- **Author:** Gemini-Nasir
+- **Git Tag:** `gemini-nasir-2026-11-02-session-calibration`
+- **Milestone Enhanced:** **AI GESTURE CALIBRATION & AUTOMATED DATASET ARCHIVE**
+- **Verified Unit Tests:** 225 passing tests (`python -m unittest discover -s tests -t . -v`).
+- **What Changed:**
+  - **Automated Calibration Data Studio (`tools/calibrate_session.py`):**
+    - Built 4-stage guided studio: Physical Setup (Player Type, Real Height in cm, Distance in ft, Camera Height) $\to$ Camera Picker $\to$ Live Framing & Distance Lock $\to$ Separate 3-attempt trials for all 9 gestures.
+    - Added real-time glowing neon skeleton overlay (all 33 MediaPipe landmarks + connecting cyan bones) directly on the person inside the live preview.
+    - Fixed `KeyError: 'body_height_norm'` on early session exit.
+    - Added automated session archival into `reports/` folder (`report_{player}_{distance}_{timestamp}.md` and `.json`) so 10–20 sessions can be run without manual copying or overwriting.
+  - **Physical Trigonometric Conversion:**
+    - Reports now calculate real physical units (Jump Height in cm, Velocity in m/s, Lean Angle in degrees) using real height and pinhole camera scale math.
+- **Peer Review Notes for Incoming AI:**
+  - Test suite passes all 225 unit tests across 26 test files in ~12.5s.
+  - Ready for living-room data collection to mathematically tune universal adaptive thresholds.
+- **Next Immediate Step:**
+  - Run 1 or 2 calibration trials at home with child/adult at 8 ft.
+  - Feed the generated `reports/*.md` into Gemini/AI to optimize universal thresholds.
+
+---
+
+
 ## [2026-10-30 20:00] Session: `gemini-nasir-2026-10-30-m6-arcade-launcher`
 - **Author:** Gemini-Nasir
 - **Git Tag:** `gemini-nasir-2026-10-30-m6-arcade-launcher`

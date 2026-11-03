@@ -213,7 +213,7 @@ class TutorialAcademy:
         font_body = pygame.font.Font(None, 24)
         font_desc = pygame.font.Font(None, 20)
 
-        title = font_title.render("🎓 MOTION ACADEMY & GESTURE TUTORIAL", True, (241, 196, 15))
+        title = font_title.render("MOTION ACADEMY & GESTURE TUTORIAL", True, (241, 196, 15))
         surface.blit(title, (sw // 2 - title.get_width() // 2, 30))
 
         sub = font_desc.render("[Left / Right] Browse Lessons  |  [Tab] View Full Key Cheat Sheet  |  [Esc] Menu", True, (0, 255, 200))
@@ -229,13 +229,13 @@ class TutorialAcademy:
         t_surf = font_header.render(f"LESSON {self.selected_lesson_idx + 1}/{len(TUTORIAL_LESSONS)}: {card['title']}", True, (255, 255, 255))
         surface.blit(t_surf, (panel_x + 25, panel_y + 20))
 
-        toy_label = font_body.render(f"🎮 TOY TO USE: {card['toy']}", True, (0, 255, 200))
+        toy_label = font_body.render(f"TOY TO USE: {card['toy']}", True, (0, 255, 200))
         surface.blit(toy_label, (panel_x + 25, panel_y + 70))
 
-        mode_label = font_body.render(f"📍 SETUP: {card['mode']}", True, (241, 196, 15))
+        mode_label = font_body.render(f"SETUP: {card['mode']}", True, (241, 196, 15))
         surface.blit(mode_label, (panel_x + 25, panel_y + 115))
 
-        how_label = font_body.render("💡 HOW TO DO IT:", True, (255, 255, 255))
+        how_label = font_body.render("HOW TO DO IT:", True, (255, 255, 255))
         surface.blit(how_label, (panel_x + 25, panel_y + 160))
         how_val = font_desc.render(card["how"], True, (210, 225, 240))
         surface.blit(how_val, (panel_x + 25, panel_y + 190))
@@ -262,7 +262,7 @@ class TutorialAcademy:
         surface.blit(pct_txt, (bar_x + 15, bar_y + 7))
 
         is_done = self.verified_lessons.get(card["id"], False)
-        status_msg = "✅ MASTERED! YOU DID IT!" if is_done else f"IMITATE THE STICKMAN! (Detected: {last_action or 'Waiting...'})"
+        status_msg = "MASTERED! YOU DID IT!" if is_done else f"IMITATE THE STICKMAN! (Detected: {last_action or 'Waiting...'})"
         msg_col = (46, 204, 113) if is_done else (241, 196, 15)
         msg_surf = font_header.render(status_msg, True, msg_col)
         surface.blit(msg_surf, (panel_x + 25, panel_y + 380))
@@ -307,7 +307,7 @@ class TutorialAcademy:
         font_header = pygame.font.Font(None, 24)
         font_row = pygame.font.Font(None, 22)
 
-        title = font_title.render("🎮 UNIVERSAL MOTION CONTROLLER - MASTER CHEAT SHEET", True, (0, 255, 200))
+        title = font_title.render("UNIVERSAL MOTION CONTROLLER - MASTER CHEAT SHEET", True, (0, 255, 200))
         surface.blit(title, (sw // 2 - title.get_width() // 2, 25))
 
         sub = font_header.render("Works on Poki, CrazyGames, WebGL & PC Games!  |  [Tab] Return to Interactive Lessons", True, (241, 196, 15))
@@ -355,6 +355,52 @@ class TutorialAcademy:
             pygame.draw.line(surface, col_body, (cx, head_y + head_radius), (cx, torso_bot_y), 5)
             pygame.draw.line(surface, col_body, (cx, torso_bot_y), (cx - 25, torso_bot_y + 50), 5)
             pygame.draw.line(surface, col_body, (cx, torso_bot_y), (cx + 25, torso_bot_y + 50), 5)
+
+        elif lesson_id == "DUCK":
+            # Body sinks down and rises again; knees bend outward while crouched.
+            phase = math.sin(t * 2.5) * 0.5 + 0.5          # 0.0 standing -> 1.0 fully crouched
+            squat = int(phase * 48)
+            hip_y = cy + squat
+            head_y = hip_y - 100
+            foot_y = cy + 55
+            knee_y = (hip_y + foot_y) // 2
+            knee_out = 12 + int(phase * 30)
+
+            pygame.draw.line(surface, (70, 80, 100), (cx - 90, foot_y + 4), (cx + 90, foot_y + 4), 3)  # floor
+            pygame.draw.circle(surface, col_body, (cx, head_y), head_radius)
+            pygame.draw.line(surface, col_body, (cx, head_y + head_radius), (cx, hip_y), 5)
+            # Arms reaching forward for balance
+            pygame.draw.line(surface, col_body, (cx, head_y + 40), (cx - 35, head_y + 40 + int(phase * 25) + 20), 4)
+            pygame.draw.line(surface, col_body, (cx, head_y + 40), (cx + 35, head_y + 40 + int(phase * 25) + 20), 4)
+            # Legs (hip -> knee -> foot)
+            pygame.draw.line(surface, col_body, (cx, hip_y), (cx - knee_out, knee_y), 5)
+            pygame.draw.line(surface, col_body, (cx - knee_out, knee_y), (cx - 22, foot_y), 5)
+            pygame.draw.line(surface, col_body, (cx, hip_y), (cx + knee_out, knee_y), 5)
+            pygame.draw.line(surface, col_body, (cx + knee_out, knee_y), (cx + 22, foot_y), 5)
+            # Low bar overhead + down arrow hint
+            pygame.draw.rect(surface, (231, 76, 60), (cx - 80, cy - 125, 160, 10), border_radius=3)
+            pygame.draw.polygon(surface, col_prop, [(cx + 100, cy - 30), (cx + 130, cy - 30), (cx + 115, cy)])
+
+        elif lesson_id == "PUNCH":
+            # Right fist thrusts forward then pulls back; left hand stays in guard.
+            thrust = int(max(0.0, math.sin(t * 5.0)) * 70)
+            head_y = cy - torso_len - 20
+            shoulder_y = head_y + head_radius + 18
+            pygame.draw.circle(surface, col_body, (cx, head_y), head_radius)
+            pygame.draw.line(surface, col_body, (cx, head_y + head_radius), (cx, cy), 5)
+            pygame.draw.line(surface, col_body, (cx, cy), (cx - 22, cy + 55), 5)
+            pygame.draw.line(surface, col_body, (cx, cy), (cx + 22, cy + 55), 5)
+            # Guard arm (left)
+            pygame.draw.line(surface, col_body, (cx, shoulder_y), (cx - 28, shoulder_y + 20), 5)
+            pygame.draw.line(surface, col_body, (cx - 28, shoulder_y + 20), (cx - 18, shoulder_y - 8), 5)
+            # Punching arm (right)
+            fist_x = cx + 25 + thrust
+            pygame.draw.line(surface, col_prop, (cx, shoulder_y), (fist_x, shoulder_y + 2), 6)
+            pygame.draw.circle(surface, (255, 80, 80), (fist_x + 6, shoulder_y + 2), 12)
+            if thrust > 45:
+                pygame.draw.circle(surface, (255, 255, 0), (fist_x + 32, shoulder_y + 2), 10, 3)
+                pygame.draw.line(surface, (255, 255, 0), (fist_x + 22, shoulder_y - 18), (fist_x + 40, shoulder_y - 30), 3)
+                pygame.draw.line(surface, (255, 255, 0), (fist_x + 22, shoulder_y + 22), (fist_x + 40, shoulder_y + 34), 3)
 
         elif lesson_id == "STEERING":
             angle = math.sin(t * 3.0) * 0.5

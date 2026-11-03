@@ -1,0 +1,13 @@
+.venv/
+dist/
+build/
+__pycache__/
+*.pyc
+*.log
+logs/
+reports/
+*.json.bad
+*.spec
+*.exe
+.git/
+session_diff.txt
