@@ -7,39 +7,42 @@ from vision.pose_tracker import PoseResult
 
 # Master Control Matrix mapping Gestures -> Hardware Keys -> Web Games
 MASTER_CONTROL_MATRIX = [
+    ("Air Mouse Move", "Point right index finger", "Windows Mouse Cursor", "All Web & PC Games", "Touchless cursor movement"),
+    ("Air Mouse Click", "Quick pinch (Thumb + Index)", "Left Mouse Click", "All Menus & Replay", "Start game, select level, Play Again"),
+    ("Air Mouse Drag", "Hold pinch while moving", "Left Mouse Hold & Drag", "Puzzle & Card Games", "Drag items, sliders, and windows"),
+    ("Air Mouse Right-Click", "Thumb touches Pinky", "Right Mouse Click", "PC & Strategy Games", "Open context menus & secondary actions"),
+    ("Air Mouse Scroll", "Left hand: Point UP or DOWN", "Mouse Scroll Wheel", "Web Pages & Catalogs", "Scroll game catalogs & pages smoothly"),
     ("Real Jump", "Leap in the air", "Spacebar / Up Arrow", "Subway Surfers, Temple Run 2", "Jump over trains, roots, pits"),
     ("Real Crouch", "Duck low / crouch", "Down Arrow", "Subway Surfers, Temple Run 2", "Slide under overhead barriers"),
     ("Body Lean", "Tilt body Left / Right", "Left / Right Arrow", "Subway Surfers, Slope 3D", "Slalom between lanes"),
-    ("Steering Wheel", "Hold plate/wheel & rotate", "Left / Right Arrow", "Madalin Stunt Cars, Drift Hunters", "Steer cars left and right"),
+    ("Steering Wheel", "Hold plate/wheel & rotate", "Left / Right Arrow", "Madalin Stunt Cars, Drift Hunters", "Steer cars left and right (Continuous Hold)"),
     ("Nerf Gun Recoil", "Aim toy gun, upward jerk", "Left Mouse Click + Space", "Zombie Derby, Stupid Zombies", "Fire weapon / shoot lasers"),
     ("Boxing Punch", "Punch fist forward", "F key / Z key", "Iron Snout, Stickman Fighter", "Punch enemies & smash crates"),
     ("Karate Kick", "Kick leg forward", "K key / X key", "Iron Snout, Fighting games", "High kick enemies"),
-    ("Power Blast", "Thrust both palms forward", "Z key + Spacebar", "Fighting Games, Brawlers", "Fire Super Rocket / Blast"),
-    ("X-Shield Block", "Cross arms into an 'X'", "X key", "Boxing Stars, Martial Arts", "Guard / Block attacks"),
     ("Chicken Flap", "Flap elbows like wings", "W key", "Flappy Dunk, Wing Gliders", "Glide in mid-air"),
     ("Flamingo Balance", "Lift 1 foot for 1 second", "L key", "Balance Challenges, Yoga", "Unlock rainbow bonus coins")
 ]
 
 TUTORIAL_LESSONS = [
     {
-        "id": "NERF_GUN",
-        "title": "NERF / TOY GUN SHOOTING",
-        "toy": "Toy Nerf Gun, Water Gun, or Two Hands",
-        "mode": "COUCH / SEATED (4 to 6 ft from TV)",
-        "how": "Hold toy gun pointing at TV. Pull trigger with upward recoil jerk to fire!",
-        "action": "SHOOT",
-        "keys": "Left Click / Spacebar",
-        "games": "Zombie Derby, Stupid Zombies, Venge.io"
+        "id": "AIR_MOUSE",
+        "title": "AIR MOUSE (TOUCHLESS HAND CONTROLLER)",
+        "toy": "Your Right Hand (and Left Hand to Scroll)",
+        "mode": "SEATED DESK or COUCH (2 to 8 ft)",
+        "how": "Point your right index to move cursor. Pinch thumb+index to Click or Drag. Touch thumb+pinky for Right-Click. Left index UP/DOWN to Scroll!",
+        "action": "AIR_MOUSE",
+        "keys": "Mouse Move, Left Click, Drag, Right Click, Scroll",
+        "games": "Poki, CrazyGames, Temple Run 2, Subway Surfers (Play Again & Menus)"
     },
     {
         "id": "STEERING",
         "title": "STEERING WHEEL (CARS & KARTS)",
         "toy": "Paper Plate, Frisbee, or Toy Wheel",
         "mode": "COUCH / SEATED (4 to 6 ft from TV)",
-        "how": "Hold plate at 9 and 3 o'clock. Rotate left or right like a real racecar driver!",
+        "how": "Hold plate at 9 and 3 o'clock. Rotate left or right like a real racecar driver! (Continuous hold)",
         "action": "STEER",
-        "keys": "Left / Right Arrow",
-        "games": "Madalin Stunt Cars 2, Drift Hunters, Rally"
+        "keys": "Left / Right Arrow (Held while turned)",
+        "games": "Madalin Stunt Cars 2, Drift Hunters, Zombie Derby"
     },
     {
         "id": "JUMP",
@@ -61,7 +64,17 @@ TUTORIAL_LESSONS = [
         "keys": "Down Arrow",
         "games": "Subway Surfers, Temple Run 2"
     },
-        {
+    {
+        "id": "NERF_GUN",
+        "title": "NERF / TOY GUN SHOOTING",
+        "toy": "Toy Nerf Gun, Water Gun, or Two Hands",
+        "mode": "COUCH / SEATED (4 to 6 ft from TV)",
+        "how": "Hold toy gun pointing at screen. Pull trigger with upward recoil jerk to fire!",
+        "action": "SHOOT",
+        "keys": "Left Click / Spacebar",
+        "games": "Zombie Derby, Stupid Zombies, Venge.io"
+    },
+    {
         "id": "LEAN_LEFT",
         "title": "LEAN LEFT",
         "toy": "Your Body",
@@ -166,7 +179,7 @@ class TutorialAcademy:
             else:
                 return "PERFECT STANDING ZONE!", "Optimal ~8.5 ft! Mark your floor tape here!", (46, 204, 113)
         else:
-            return "PERFECT COUCH ZONE!", "Optimal ~5.0 ft! Ready for driving & shooting!", (52, 152, 219)
+            return "PERFECT DESK / COUCH ZONE!", "Optimal 2 to 6 ft! Ready for mouse & driving!", (52, 152, 219)
 
     def calculate_match_percentage(self, lesson_id: str, last_action: str,
                                    pose: Optional[PoseResult]) -> int:
@@ -174,41 +187,54 @@ class TutorialAcademy:
             return 0
 
         lms = pose.landmarks
-        l_wrist = lms.get("left_wrist")
         r_wrist = lms.get("right_wrist")
-        l_elbow = lms.get("left_elbow")
-        r_elbow = lms.get("right_elbow")
-        l_ankle = lms.get("left_ankle")
-        r_ankle = lms.get("right_ankle")
+        r_index = lms.get("right_index")
 
-        target_action = TUTORIAL_LESSONS[self.selected_lesson_idx]["action"]
+        # Look up target action by lesson_id rather than assuming selected index
+        lesson = next((l for l in TUTORIAL_LESSONS if l["id"] == lesson_id), None)
+        target_action = lesson["action"] if lesson else TUTORIAL_LESSONS[self.selected_lesson_idx]["action"]
+
         if last_action and (target_action in last_action or last_action in target_action):
             return 100
 
-        if lesson_id == "NERF_GUN" and l_wrist and r_wrist:
-            dist = abs(l_wrist.x - r_wrist.x)
-            if dist < 0.15:
-                return 75 if "SHOOT" in last_action else 50
-            return 25
-
-        elif lesson_id == "STEERING" and l_wrist and r_wrist:
-            tilt = abs(l_wrist.y - r_wrist.y)
-            if tilt > 0.08:
-                return 80
-            elif abs(l_wrist.x - r_wrist.x) > 0.15:
-                return 50
+        if lesson_id == "AIR_MOUSE":
+            if r_wrist and r_index and r_wrist.visibility > 0.4 and r_index.visibility > 0.4:
+                return 100 if last_action == "AIR_MOUSE" else 85
             return 20
 
-        elif lesson_id == "FLAMINGO" and l_ankle and r_ankle:
-            split = abs(l_ankle.y - r_ankle.y)
-            if split > 0.08:
-                return 85
-            elif split > 0.04:
-                return 50
+        elif lesson_id == "STEERING":
+            l_wrist = lms.get("left_wrist")
+            if l_wrist and r_wrist:
+                tilt = abs(l_wrist.y - r_wrist.y)
+                if tilt > 0.075:
+                    return 100
+                elif abs(l_wrist.x - r_wrist.x) > 0.12:
+                    return 50
+            return 20
+
+        elif lesson_id == "NERF_GUN":
+            l_wrist = lms.get("left_wrist")
+            if l_wrist and r_wrist:
+                dist = abs(l_wrist.x - r_wrist.x)
+                if dist < 0.15:
+                    return 75 if "SHOOT" in last_action else 50
+                return 25
+
+        elif lesson_id == "FLAMINGO":
+            l_ankle = lms.get("left_ankle")
+            r_ankle = lms.get("right_ankle")
+            if l_ankle and r_ankle:
+                split = abs(l_ankle.y - r_ankle.y)
+                if split > 0.08:
+                    return 85
+                elif split > 0.04:
+                    return 50
             return 15
 
-        elif lesson_id == "CHICKEN_FLAP" and l_elbow and r_elbow:
-            if abs(l_elbow.x - r_elbow.x) > 0.25:
+        elif lesson_id == "CHICKEN_FLAP":
+            l_elbow = lms.get("left_elbow")
+            r_elbow = lms.get("right_elbow")
+            if l_elbow and r_elbow and abs(l_elbow.x - r_elbow.x) > 0.25:
                 return 60
             return 20
 
@@ -249,22 +275,22 @@ class TutorialAcademy:
         t_surf = font_header.render(f"LESSON {self.selected_lesson_idx + 1}/{len(TUTORIAL_LESSONS)}: {card['title']}", True, (255, 255, 255))
         surface.blit(t_surf, (panel_x + 25, panel_y + 20))
 
-        toy_label = font_body.render(f"TOY TO USE: {card['toy']}", True, (0, 255, 200))
-        surface.blit(toy_label, (panel_x + 25, panel_y + 70))
+        toy_label = font_body.render(f"EQUIPMENT: {card['toy']}", True, (0, 255, 200))
+        surface.blit(toy_label, (panel_x + 25, panel_y + 65))
 
         mode_label = font_body.render(f"SETUP: {card['mode']}", True, (241, 196, 15))
-        surface.blit(mode_label, (panel_x + 25, panel_y + 115))
+        surface.blit(mode_label, (panel_x + 25, panel_y + 105))
 
         how_label = font_body.render("HOW TO DO IT:", True, (255, 255, 255))
-        surface.blit(how_label, (panel_x + 25, panel_y + 160))
+        surface.blit(how_label, (panel_x + 25, panel_y + 145))
         how_val = font_desc.render(card["how"], True, (210, 225, 240))
-        surface.blit(how_val, (panel_x + 25, panel_y + 190))
+        surface.blit(how_val, (panel_x + 25, panel_y + 175))
 
-        key_label = font_desc.render(f"Hardware keys sent to games: [{card['keys']}]", True, (241, 196, 15))
-        surface.blit(key_label, (panel_x + 25, panel_y + 240))
+        key_label = font_desc.render(f"Signals Sent: [{card['keys']}]", True, (241, 196, 15))
+        surface.blit(key_label, (panel_x + 25, panel_y + 230))
 
-        games_label = font_desc.render(f"Poki & Web Games: {card['games']}", True, (0, 255, 200))
-        surface.blit(games_label, (panel_x + 25, panel_y + 270))
+        games_label = font_desc.render(f"Web Games: {card['games']}", True, (0, 255, 200))
+        surface.blit(games_label, (panel_x + 25, panel_y + 265))
 
         # Live Real-Time Match Percentage Bar
         match_pct = self.calculate_match_percentage(card["id"], last_action, pose)
@@ -315,7 +341,7 @@ class TutorialAcademy:
         surface.blit(adv_surf, (bot_rect[0] + 25, bot_rect[1] + 38))
 
     def _draw_cheat_sheet(self, surface: pygame.Surface) -> None:
-        """Draws the 10-ft readable Master Control Matrix table."""
+        """Draws the Master Control Matrix table."""
         sw = surface.get_width()
         sh = surface.get_height()
 
@@ -323,20 +349,19 @@ class TutorialAcademy:
         overlay.fill((8, 12, 22, 250))
         surface.blit(overlay, (0, 0))
 
-        font_title = pygame.font.Font(None, 46)
-        font_header = pygame.font.Font(None, 24)
-        font_row = pygame.font.Font(None, 22)
+        font_title = pygame.font.Font(None, 44)
+        font_header = pygame.font.Font(None, 22)
+        font_row = pygame.font.Font(None, 20)
 
         title = font_title.render("UNIVERSAL MOTION CONTROLLER - MASTER CHEAT SHEET", True, (0, 255, 200))
-        surface.blit(title, (sw // 2 - title.get_width() // 2, 25))
+        surface.blit(title, (sw // 2 - title.get_width() // 2, 20))
 
-        sub = font_header.render("Works on Poki, CrazyGames, WebGL & PC Games!  |  [Tab] Return to Interactive Lessons", True, (241, 196, 15))
-        surface.blit(sub, (sw // 2 - sub.get_width() // 2, 75))
+        sub = font_header.render("Controls Poki, CrazyGames & PC Games!  |  [Tab] Return to Lessons", True, (241, 196, 15))
+        surface.blit(sub, (sw // 2 - sub.get_width() // 2, 65))
 
-        # Table Headers
-        table_x, start_y = 60, 120
-        col_widths = [180, 240, 220, 360, 320]
-        headers = ["GESTURE / ACTION", "HOW TO DO IT", "KEYS SENT", "POKI & WEB GAMES", "GAME FUNCTION"]
+        table_x, start_y = 50, 105
+        col_widths = [190, 250, 220, 330, 290]
+        headers = ["GESTURE / ACTION", "HOW TO DO IT", "SIGNALS SENT", "SUPPORTED GAMES", "GAME FUNCTION"]
 
         cur_x = table_x
         for i, h in enumerate(headers):
@@ -344,10 +369,9 @@ class TutorialAcademy:
             surface.blit(h_surf, (cur_x, start_y))
             cur_x += col_widths[i]
 
-        pygame.draw.line(surface, (52, 152, 219), (table_x, start_y + 30), (sw - 60, start_y + 30), 2)
+        pygame.draw.line(surface, (52, 152, 219), (table_x, start_y + 25), (sw - 50, start_y + 25), 2)
 
-        # Table Rows
-        row_y = start_y + 40
+        row_y = start_y + 35
         for row in MASTER_CONTROL_MATRIX:
             cur_x = table_x
             for i, val in enumerate(row):
@@ -355,7 +379,7 @@ class TutorialAcademy:
                 cell_surf = font_row.render(val, True, color)
                 surface.blit(cell_surf, (cur_x, row_y))
                 cur_x += col_widths[i]
-            row_y += 34
+            row_y += 32
 
     def _draw_animated_stickman(self, surface: pygame.Surface, lesson_id: str,
                                 cx: int, cy: int) -> None:
@@ -367,7 +391,50 @@ class TutorialAcademy:
         head_radius = 24
         torso_len = 80
 
-        if lesson_id == "JUMP":
+        if lesson_id == "AIR_MOUSE":
+            # Animated stickman pointing right arm forward at a floating cursor with click ripples
+            head_y = cy - torso_len - 20
+            pygame.draw.circle(surface, col_body, (cx, head_y), head_radius)
+            pygame.draw.line(surface, col_body, (cx, head_y + head_radius), (cx, cy), 5)
+            # Legs (seated or standing)
+            pygame.draw.line(surface, col_body, (cx, cy), (cx - 20, cy + 55), 5)
+            pygame.draw.line(surface, col_body, (cx, cy), (cx + 20, cy + 55), 5)
+
+            # Left arm (relaxed)
+            pygame.draw.line(surface, col_body, (cx, head_y + head_radius + 15), (cx - 25, cy - 5), 4)
+
+            # Right arm pointing forward
+            hand_x = cx + 65
+            hand_y = cy - 35
+            pygame.draw.line(surface, col_prop, (cx, head_y + head_radius + 15), (cx + 35, cy - 15), 5)
+            pygame.draw.line(surface, col_prop, (cx + 35, cy - 15), (hand_x, hand_y), 5)
+            # Pointing index finger
+            pygame.draw.line(surface, (255, 255, 255), (hand_x, hand_y), (hand_x + 18, hand_y - 12), 4)
+
+            # Floating cursor dot moving in a circle
+            cur_x = hand_x + 50 + int(math.sin(t * 2.5) * 40)
+            cur_y = hand_y - 20 + int(math.cos(t * 2.5) * 25)
+
+            # Draw cursor arrow
+            pygame.draw.polygon(surface, (255, 255, 255), [
+                (cur_x, cur_y),
+                (cur_x + 14, cur_y + 10),
+                (cur_x + 6, cur_y + 12),
+                (cur_x + 10, cur_y + 20),
+                (cur_x + 4, cur_y + 22),
+                (cur_x, cur_y + 14)
+            ])
+
+            # Periodic click ripple animation
+            pulse = math.sin(t * 3.5)
+            if pulse > 0.5:
+                r_size = int((pulse - 0.5) * 35)
+                pygame.draw.circle(surface, (0, 255, 200), (cur_x, cur_y), r_size, 2)
+                f_click = pygame.font.Font(None, 22)
+                c_txt = f_click.render("CLICK!", True, (0, 255, 200))
+                surface.blit(c_txt, (cur_x + 18, cur_y - 15))
+
+        elif lesson_id == "JUMP":
             jump_offset = int(max(0.0, math.sin(t * 3.5)) * 60)
             head_y = cy - torso_len - 30 - jump_offset
             torso_bot_y = head_y + torso_len
@@ -377,8 +444,7 @@ class TutorialAcademy:
             pygame.draw.line(surface, col_body, (cx, torso_bot_y), (cx + 25, torso_bot_y + 50), 5)
 
         elif lesson_id == "DUCK":
-            # Body sinks down and rises again; knees bend outward while crouched.
-            phase = math.sin(t * 2.5) * 0.5 + 0.5          # 0.0 standing -> 1.0 fully crouched
+            phase = math.sin(t * 2.5) * 0.5 + 0.5
             squat = int(phase * 48)
             hip_y = cy + squat
             head_y = hip_y - 100
@@ -386,41 +452,12 @@ class TutorialAcademy:
             knee_y = (hip_y + foot_y) // 2
             knee_out = 12 + int(phase * 30)
 
-            pygame.draw.line(surface, (70, 80, 100), (cx - 90, foot_y + 4), (cx + 90, foot_y + 4), 3)  # floor
             pygame.draw.circle(surface, col_body, (cx, head_y), head_radius)
             pygame.draw.line(surface, col_body, (cx, head_y + head_radius), (cx, hip_y), 5)
-            # Arms reaching forward for balance
-            pygame.draw.line(surface, col_body, (cx, head_y + 40), (cx - 35, head_y + 40 + int(phase * 25) + 20), 4)
-            pygame.draw.line(surface, col_body, (cx, head_y + 40), (cx + 35, head_y + 40 + int(phase * 25) + 20), 4)
-            # Legs (hip -> knee -> foot)
             pygame.draw.line(surface, col_body, (cx, hip_y), (cx - knee_out, knee_y), 5)
-            pygame.draw.line(surface, col_body, (cx - knee_out, knee_y), (cx - 22, foot_y), 5)
             pygame.draw.line(surface, col_body, (cx, hip_y), (cx + knee_out, knee_y), 5)
+            pygame.draw.line(surface, col_body, (cx - knee_out, knee_y), (cx - 22, foot_y), 5)
             pygame.draw.line(surface, col_body, (cx + knee_out, knee_y), (cx + 22, foot_y), 5)
-            # Low bar overhead + down arrow hint
-            pygame.draw.rect(surface, (231, 76, 60), (cx - 80, cy - 125, 160, 10), border_radius=3)
-            pygame.draw.polygon(surface, col_prop, [(cx + 100, cy - 30), (cx + 130, cy - 30), (cx + 115, cy)])
-
-        elif lesson_id == "PUNCH":
-            # Right fist thrusts forward then pulls back; left hand stays in guard.
-            thrust = int(max(0.0, math.sin(t * 5.0)) * 70)
-            head_y = cy - torso_len - 20
-            shoulder_y = head_y + head_radius + 18
-            pygame.draw.circle(surface, col_body, (cx, head_y), head_radius)
-            pygame.draw.line(surface, col_body, (cx, head_y + head_radius), (cx, cy), 5)
-            pygame.draw.line(surface, col_body, (cx, cy), (cx - 22, cy + 55), 5)
-            pygame.draw.line(surface, col_body, (cx, cy), (cx + 22, cy + 55), 5)
-            # Guard arm (left)
-            pygame.draw.line(surface, col_body, (cx, shoulder_y), (cx - 28, shoulder_y + 20), 5)
-            pygame.draw.line(surface, col_body, (cx - 28, shoulder_y + 20), (cx - 18, shoulder_y - 8), 5)
-            # Punching arm (right)
-            fist_x = cx + 25 + thrust
-            pygame.draw.line(surface, col_prop, (cx, shoulder_y), (fist_x, shoulder_y + 2), 6)
-            pygame.draw.circle(surface, (255, 80, 80), (fist_x + 6, shoulder_y + 2), 12)
-            if thrust > 45:
-                pygame.draw.circle(surface, (255, 255, 0), (fist_x + 32, shoulder_y + 2), 10, 3)
-                pygame.draw.line(surface, (255, 255, 0), (fist_x + 22, shoulder_y - 18), (fist_x + 40, shoulder_y - 30), 3)
-                pygame.draw.line(surface, (255, 255, 0), (fist_x + 22, shoulder_y + 22), (fist_x + 40, shoulder_y + 34), 3)
 
         elif lesson_id == "STEERING":
             angle = math.sin(t * 3.0) * 0.5
@@ -447,6 +484,26 @@ class TutorialAcademy:
             if recoil > 10:
                 pygame.draw.circle(surface, (255, 255, 0), (gun_x + 15, gun_y + 8), 12)
 
+        elif lesson_id in ("LEAN_LEFT", "LEAN_RIGHT"):
+            direction = -1 if lesson_id == "LEAN_LEFT" else 1
+            lean = int(max(0.0, math.sin(t * 2.5)) * 45) * direction
+            head_x = cx + lean
+            head_y = cy - torso_len - 20
+            pygame.draw.circle(surface, col_body, (head_x, head_y), head_radius)
+            pygame.draw.line(surface, col_body, (head_x, head_y + head_radius), (cx, cy), 5)
+            pygame.draw.line(surface, col_body, (cx, cy), (cx - 20, cy + 55), 5)
+            pygame.draw.line(surface, col_body, (cx, cy), (cx + 20, cy + 55), 5)
+
+        elif lesson_id == "PUNCH":
+            thrust = int(max(0.0, math.sin(t * 5.0)) * 70)
+            head_y = cy - torso_len - 20
+            shoulder_y = head_y + head_radius + 18
+            pygame.draw.circle(surface, col_body, (cx, head_y), head_radius)
+            pygame.draw.line(surface, col_body, (cx, head_y + head_radius), (cx, cy), 5)
+            fist_x = cx + 25 + thrust
+            pygame.draw.line(surface, col_prop, (cx, shoulder_y), (fist_x, shoulder_y + 2), 6)
+            pygame.draw.circle(surface, (255, 80, 80), (fist_x + 6, shoulder_y + 2), 12)
+
         elif lesson_id == "CHICKEN_FLAP":
             flap = int(math.sin(t * 8.0) * 25)
             head_y = cy - torso_len - 20
@@ -461,18 +518,6 @@ class TutorialAcademy:
             pygame.draw.line(surface, col_body, (cx, head_y + head_radius), (cx, cy), 5)
             pygame.draw.line(surface, col_body, (cx, cy), (cx - 10, cy + 60), 5)
             pygame.draw.line(surface, (255, 100, 150), (cx, cy), (cx + 30, cy + 25), 5)
-            pygame.draw.line(surface, (255, 100, 150), (cx + 30, cy + 25), (cx + 10, cy + 25), 5)
-
-        elif lesson_id in ("LEAN_LEFT", "LEAN_RIGHT"):
-            direction = -1 if lesson_id == "LEAN_LEFT" else 1
-            lean = int(max(0.0, math.sin(t * 2.5)) * 45) * direction
-            head_x = cx + lean
-            head_y = cy - torso_len - 20
-            pygame.draw.circle(surface, col_body, (head_x, head_y), head_radius)
-            pygame.draw.line(surface, col_body, (head_x, head_y + head_radius), (cx, cy), 5)
-            pygame.draw.line(surface, col_body, (cx, cy), (cx - 20, cy + 55), 5)
-            pygame.draw.line(surface, col_body, (cx, cy), (cx + 20, cy + 55), 5)
-
 
         else:
             head_y = cy - torso_len - 20
