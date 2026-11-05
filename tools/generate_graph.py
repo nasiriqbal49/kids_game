@@ -6,7 +6,7 @@ from typing import Dict, List, Set, Tuple
 REPO_DIR = Path(__file__).resolve().parent.parent
 OUTPUT_GRAPH_FILE = REPO_DIR / "docs" / "project_graph.md"
 
-TARGET_FOLDERS = ["core", "engine", "vision", "identity", "tools", "projection"]
+TARGET_FOLDERS = ["core", "engine", "vision", "tools"]
 IGNORE_DIRS = {".venv", "__pycache__", "dist", "build", ".git"}
 
 
@@ -84,8 +84,6 @@ class CodeGraphScanner:
             "Core_Layer": ("Core Architecture", "core/"),
             "Vision_Pipeline": ("Vision Pipeline", "vision/"),
             "Engine_Layer": ("Engine & Controller", "engine/"),
-            "Identity_Layer": ("Identity & Economy", "identity/"),
-            "Projection_Layer": ("Projection Output", "projection/"),
             "Tools_Layer": ("Tools & Launchers", "tools/")
         }
 

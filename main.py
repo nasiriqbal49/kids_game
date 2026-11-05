@@ -1,166 +1,105 @@
+import os
 import sys
 import time
 import cv2
 import pygame
 
-from core.logger import setup_logging, configure_from, get_logger
+from core.logger import setup_logging, get_logger
 from core.config import get_config
-from core.events import Event, EventType
 from core.event_bus import get_event_bus
-from core.input_keyboard import KeyboardInputAdapter
-from engine.display import DisplayManager
-from engine.event_pump import EventPump
-from engine.audio import AudioManager
-from engine.games import RunnerGame, LaneSwitchGame, FreezeDanceGame, SpookyRedLightGame
-from engine.game_engine import GameState
 from engine.motion_bridge import MotionControllerBridge
 from engine.tutorial_ui import TutorialAcademy
-
-# Vision Pipeline
-from vision.camera_manager import CameraManager
 from vision.camera_supervisor import CameraSupervisor
-from vision.camera_configurator import CameraConfigurator, CameraRole
 from vision.pose_tracker import PoseTracker
-from vision.zone_calibration import ZoneCalibrator
 from vision.player_lock import PlayerLock
+from vision.zone_calibration import ZoneCalibrator
 from vision.action_detector import ActionDetector
-from vision.debug_tools import DebugOverlay
-
-# Identity & Economy Pipeline
-from identity.profile_manager import ProfileManager
-from identity.shop_manager import ShopManager
 
 setup_logging()
 cfg = get_config()
-configure_from(cfg)
 log = get_logger("main")
-
-log.info("--- Starting Kids Motion Game (Complete Arcade + Academy + Motion Bridge) ---")
 
 
 def run():
+    pygame.init()
+    pygame.font.init()
+
+    sw, sh = 1280, 720
+    screen = pygame.display.set_mode((sw, sh), pygame.RESIZABLE)
+    pygame.display.set_caption("Universal Motion Game Controller")
+    clock = pygame.time.Clock()
+
     bus = get_event_bus()
-    keyboard = KeyboardInputAdapter(bus=bus, cfg=cfg)
-    display = DisplayManager(bus=bus, cfg=cfg)
-    audio = AudioManager(bus=bus, cfg=cfg)
-    pump = EventPump(display=display, keyboard=keyboard)
-
-    display.init_display(headless=False)
-    screen = display.screen
-    clock = display.clock
-
-    # Profile & Shop Managers
-    profile_mgr = ProfileManager(bus=bus, cfg=cfg)
-    all_profiles = profile_mgr.list_profiles()
-    active_player = all_profiles[0] if all_profiles else profile_mgr.create_profile("Champion")
-    profile_mgr.select_profile(active_player.profile_id)
-    display.hud_state["player_name"] = active_player.name
-
-    shop_mgr = ShopManager(bus=bus, cfg=cfg, profile_manager=profile_mgr)
-
-    # Motion Bridge & Tutorial Academy
     motion_bridge = MotionControllerBridge(bus=bus, cfg=cfg)
-    academy = TutorialAcademy()
-
-    # Camera Configurator & Supervisor
-    configurator = CameraConfigurator(bus=bus, cfg=cfg)
-
-    def create_supervisor():
-        f_idx = configurator.get_assigned_device(CameraRole.FRONT)
-        if f_idx is None:
-            f_idx = cfg.get("camera.camera_index", 0)
-        l_idx = configurator.get_assigned_device(CameraRole.LAPTOP) or 0
-        return CameraSupervisor(bus=bus, cfg=cfg, phone_index=f_idx, laptop_index=l_idx)
-
-    camera_supervisor = create_supervisor()
-
-    # Vision Tracking
     pose_tracker = PoseTracker(bus=bus, cfg=cfg)
+
+    # Supervisor automatically chooses Iriun Phone -> Laptop Webcam -> Keyboard
+    camera_supervisor = CameraSupervisor(bus=bus, cfg=cfg, laptop_index=0, min_brightness=6.0)
+
     zone_calibrator = ZoneCalibrator(bus=bus, cfg=cfg)
-    zone_calibrator.load_calibration("front")
     player_lock = PlayerLock(bus=bus, cfg=cfg)
     action_detector = ActionDetector(bus=bus, cfg=cfg)
-    debug_overlay = DebugOverlay(bus=bus, cfg=cfg)
+    academy = TutorialAcademy()
 
-    # Instantiate All 4 Custom Games
-    runner_game = RunnerGame(bus=bus, cfg=cfg, display=display, audio=audio)
-    slalom_game = LaneSwitchGame(bus=bus, cfg=cfg, display=display, audio=audio)
-    freeze_game = FreezeDanceGame(bus=bus, cfg=cfg, display=display, audio=audio)
-    spooky_game = SpookyRedLightGame(bus=bus, cfg=cfg, display=display, audio=audio)
+    active_view = "HUB"  # "HUB", "ACADEMY", "MINI_DOCK"
+    hub_selected_idx = 0
 
-    active_game = runner_game
-    active_game.engine.transition_to(GameState.MENU)
+    portal_buttons = [
+        ("Background Mode (Play ANY web or PC game)", "background"),
+        ("🏃 Temple Run 2 (Direct WebGL)", "temple_run"),
+        ("🚆 Subway Surfers (Direct WebGL)", "subway_surfers"),
+        ("🌐 Poki Motion Arcade (All Free Games)", "poki"),
+        ("🏎️ CrazyGames 3D Hub (Racing & Driving)", "crazy_games"),
+        ("🥊 Iron Snout Fighting (Punch & Kick)", "iron_snout"),
+        ("🧟 Zombie Derby (Steer & Shoot)", "zombie_derby"),
+        ("🎓 Motion Academy & Gesture Guide", "academy"),
+    ]
 
-    def refresh_menu():
-        p_name = profile_mgr.active_profile.name if profile_mgr.active_profile else "None"
-        display.set_menu("KIDS MOTION GAME", [
-            "Game 1: 3D Hurdle Runner (Custom)",
-            "Game 2: Coin Slalom (Custom)",
-            "Game 3: Freeze Dance & Floor is Lava!",
-            "Game 4: Spooky Red Light (Creep & Freeze)",
-            "🏃 Temple Run 2 (3D Motion Play)",
-            "🚆 Subway Surfers (3D Motion Play)",
-            "🌐 Poki Free Motion Arcade (All Games)",
-            "🎓 Motion Academy & Gesture Guide",
-            "🛒 Virtual Coin Shop (Buy Power-ups)",
-            "🛠️ Parent Workshop (Bonus Coins & Art)",
-            "Camera Setup (3-Camera Wizard)",
-            f"Active Player: {p_name} (Click to Change)",
-            "Quit"
-        ])
-
-    refresh_menu()
-
+    desk_test_mode = False
     running = True
-    show_camera_setup = False
-    show_shop = False
-    show_workshop = False
-    show_tutorial = False
-    external_game_active = False
+    last_frame_ts = -1.0
+    locked_pose = None
+    pose_result = None
+    preview_surf = None
 
-    shop_selected_idx = 0
-    shop_feedback_msg = ""
-    workshop_selected_idx = 0
-    latest_skeleton_pts = []
+    log.info("Universal Motion Controller started successfully.")
 
-    while running and not display.quit_requested:
-        dt = clock.tick(60) / 1000.0  # Lock at 60 FPS
+    while running:
+        dt = clock.tick(30) / 1000.0  # Runs at 30 FPS (< 2% CPU)
 
         events = pygame.event.get()
-        pump_events = []
-
         for event in events:
-            if event.type == pygame.KEYDOWN:
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    if external_game_active:
-                        external_game_active = False
+                    if active_view != "HUB":
+                        active_view = "HUB"
                         motion_bridge.stop_bridge()
-                        refresh_menu()
-                    elif show_camera_setup:
-                        configurator.release_caps()
-                        show_camera_setup = False
-                        camera_supervisor = create_supervisor()
-                    elif show_shop:
-                        show_shop = False
-                        refresh_menu()
-                    elif show_workshop:
-                        show_workshop = False
-                        refresh_menu()
-                    elif show_tutorial:
-                        show_tutorial = False
-                        refresh_menu()
-                    elif active_game.engine.state == GameState.PLAYING:
-                        active_game.engine.transition_to(GameState.PAUSED)
                     else:
                         running = False
 
-                elif event.key == pygame.K_c and not (show_camera_setup or show_shop or show_workshop or show_tutorial or external_game_active):
-                    show_camera_setup = True
-                    camera_supervisor.close()
-                    configurator.scan_devices(max_to_test=8)
+                elif event.key == pygame.K_F2:
+                    desk_test_mode = not desk_test_mode
+                    log.info("Desk test mode (zone bypass): %s", "ON" if desk_test_mode else "OFF")
 
-                # Tutorial Academy Navigation
-                elif show_tutorial:
+                elif active_view == "HUB":
+                    if event.key == pygame.K_UP:
+                        hub_selected_idx = (hub_selected_idx - 1) % len(portal_buttons)
+                    elif event.key == pygame.K_DOWN:
+                        hub_selected_idx = (hub_selected_idx + 1) % len(portal_buttons)
+                    elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                        label, key = portal_buttons[hub_selected_idx]
+                        if key == "academy":
+                            active_view = "ACADEMY"
+                        elif key == "background":
+                            active_view = "MINI_DOCK"
+                            motion_bridge.start_background_mode()
+                        else:
+                            active_view = "MINI_DOCK"
+                            motion_bridge.launch_portal_or_game(key)
+
+                elif active_view == "ACADEMY":
                     if event.key == pygame.K_LEFT:
                         academy.prev_lesson()
                     elif event.key == pygame.K_RIGHT:
@@ -168,372 +107,98 @@ def run():
                     elif event.key == pygame.K_TAB:
                         academy.toggle_cheat_sheet()
 
-                # Camera Setup Navigation
-                elif show_camera_setup:
-                    if event.key == pygame.K_LEFT:
-                        configurator.selected_device_idx = max(0, configurator.selected_device_idx - 1)
-                    elif event.key == pygame.K_RIGHT:
-                        configurator.selected_device_idx = min(len(configurator.detected_devices) - 1, configurator.selected_device_idx + 1)
-                    elif event.key == pygame.K_1:
-                        if configurator.detected_devices:
-                            dev_idx = configurator.detected_devices[configurator.selected_device_idx]["device_index"]
-                            configurator.assign_role(CameraRole.FRONT, dev_idx)
-                    elif event.key == pygame.K_2:
-                        if configurator.detected_devices:
-                            dev_idx = configurator.detected_devices[configurator.selected_device_idx]["device_index"]
-                            configurator.assign_role(CameraRole.SIDE, dev_idx)
-                    elif event.key == pygame.K_3:
-                        if configurator.detected_devices:
-                            dev_idx = configurator.detected_devices[configurator.selected_device_idx]["device_index"]
-                            configurator.assign_role(CameraRole.LAPTOP, dev_idx)
-                    elif event.key == pygame.K_r:
-                        configurator.scan_devices(max_to_test=8)
-                    elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
-                        valid, _ = configurator.validate_setup()
-                        if valid:
-                            configurator.save_to_config()
-                            configurator.release_caps()
-                            show_camera_setup = False
-                            camera_supervisor = create_supervisor()
+                elif active_view == "MINI_DOCK":
+                    if event.key == pygame.K_F10:
+                        active_view = "HUB"
+                        motion_bridge.stop_bridge()
 
-                # Shop Navigation
-                elif show_shop:
-                    catalog_items = shop_mgr.list_items()
-                    if event.key == pygame.K_UP:
-                        shop_selected_idx = (shop_selected_idx - 1) % len(catalog_items)
-                        shop_feedback_msg = ""
-                    elif event.key == pygame.K_DOWN:
-                        shop_selected_idx = (shop_selected_idx + 1) % len(catalog_items)
-                        shop_feedback_msg = ""
-                    elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
-                        if catalog_items and profile_mgr.active_profile:
-                            item = catalog_items[shop_selected_idx]
-                            success, msg = shop_mgr.buy_item(profile_mgr.active_profile.profile_id, item.item_id)
-                            shop_feedback_msg = msg
-                            if success:
-                                audio.play_sound("powerup")
-                            else:
-                                audio.play_sound("hit")
-
-                # Parent Workshop Navigation
-                elif show_workshop:
-                    workshop_options = ["Grant +100 Coins", "Grant +500 Coins", "Open Custom Assets Folder", "Return to Menu"]
-                    if event.key == pygame.K_UP:
-                        workshop_selected_idx = (workshop_selected_idx - 1) % len(workshop_options)
-                    elif event.key == pygame.K_DOWN:
-                        workshop_selected_idx = (workshop_selected_idx + 1) % len(workshop_options)
-                    elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
-                        opt = workshop_options[workshop_selected_idx]
-                        if opt == "Grant +100 Coins" and profile_mgr.active_profile:
-                            shop_mgr.parent_grant_coins(profile_mgr.active_profile.profile_id, 100)
-                            audio.play_sound("powerup")
-                        elif opt == "Grant +500 Coins" and profile_mgr.active_profile:
-                            shop_mgr.parent_grant_coins(profile_mgr.active_profile.profile_id, 500)
-                            audio.play_sound("powerup")
-                        elif opt == "Open Custom Assets Folder":
-                            shop_mgr.open_assets_folder_in_explorer()
-                        elif opt == "Return to Menu":
-                            show_workshop = False
-                            refresh_menu()
-
-                # Results Screen Navigation
-                elif active_game.engine.state == GameState.RESULTS:
-                    if event.key == pygame.K_UP:
-                        active_game.results_nav_prev()
-                    elif event.key == pygame.K_DOWN:
-                        active_game.results_nav_next()
-                    elif event.key in (pygame.K_SPACE, pygame.K_RETURN):
-                        choice = active_game.results_select()
-                        if choice == "Play Again":
-                            active_game.start_new_game()
-                        elif choice == "Main Menu":
-                            if active_game == runner_game:
-                                profile_mgr.record_game_result("runner", runner_game.mechanics.score, coins_earned=runner_game.mechanics.score // 50)
-                            elif active_game == slalom_game:
-                                profile_mgr.record_game_result("lane_switch", slalom_game.mechanics.score, coins_earned=slalom_game.coins_collected)
-                            elif active_game == freeze_game:
-                                profile_mgr.record_game_result("freeze_dance", freeze_game.score, coins_earned=freeze_game.coins)
-                            elif active_game == spooky_game:
-                                profile_mgr.record_game_result("spooky_red_light", spooky_game.score, coins_earned=spooky_game.coins)
-
-                            active_game.engine.transition_to(GameState.MENU)
-                            refresh_menu()
-
-                # Main Menu Navigation
-                elif active_game.engine.state in (GameState.MENU, GameState.PAUSED):
-                    if event.key == pygame.K_UP:
-                        display.menu_nav_prev()
-                    elif event.key == pygame.K_DOWN:
-                        display.menu_nav_next()
-                    elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
-                        selected = display.menu_select_instant()
-
-                        if selected and "Game 1:" in selected:
-                            active_game = runner_game
-                            active_game.start_new_game()
-                        elif selected and "Game 2:" in selected:
-                            active_game = slalom_game
-                            active_game.start_new_game()
-                        elif selected and "Game 3:" in selected:
-                            active_game = freeze_game
-                            active_game.start_new_game()
-                        elif selected and "Game 4:" in selected:
-                            active_game = spooky_game
-                            active_game.start_new_game()
-                        elif selected and "Temple Run" in selected:
-                            external_game_active = True
-                            motion_bridge.launch_portal_or_game("temple_run")
-                        elif selected and "Subway Surfers" in selected:
-                            external_game_active = True
-                            motion_bridge.launch_portal_or_game("subway_surfers")
-                        elif selected and "Poki Free" in selected:
-                            external_game_active = True
-                            motion_bridge.launch_portal_or_game("poki")
-                        elif selected and "Motion Academy" in selected:
-                            show_tutorial = True
-                        elif selected and "Virtual Coin Shop" in selected:
-                            show_shop = True
-                            shop_selected_idx = 0
-                            shop_feedback_msg = ""
-                        elif selected and "Parent Workshop" in selected:
-                            show_workshop = True
-                            workshop_selected_idx = 0
-                        elif selected in ("Start Game", "Play Again", "Restart"):
-                            active_game.start_new_game()
-                        elif selected == "Resume":
-                            active_game.engine.transition_to(GameState.PLAYING)
-                        elif selected and "Camera Setup" in selected:
-                            show_camera_setup = True
-                            camera_supervisor.close()
-                            configurator.scan_devices(max_to_test=8)
-                        elif selected and "Active Player:" in selected:
-                            profiles = profile_mgr.list_profiles()
-                            if len(profiles) <= 1:
-                                profile_mgr.create_profile("Player 2")
-                                profiles = profile_mgr.list_profiles()
-
-                            curr_idx = 0
-                            for i, p in enumerate(profiles):
-                                if profile_mgr.active_profile and p.profile_id == profile_mgr.active_profile.profile_id:
-                                    curr_idx = i
-                                    break
-                            next_p = profiles[(curr_idx + 1) % len(profiles)]
-                            profile_mgr.select_profile(next_p.profile_id)
-                            display.hud_state["player_name"] = next_p.name
-                            refresh_menu()
-                        elif selected in ("Quit", "Quit to Menu"):
-                            if active_game.engine.state == GameState.PAUSED:
-                                active_game.engine.transition_to(GameState.MENU)
-                                refresh_menu()
-                            else:
-                                running = False
-
-                # Keyboard Gameplay Controls
-                elif active_game.engine.state == GameState.PLAYING:
-                    if event.key == pygame.K_SPACE and hasattr(active_game, "request_jump"):
-                        active_game.request_jump()
-                    elif event.key == pygame.K_LEFT and hasattr(active_game, "shift_lane_relative"):
-                        active_game.shift_lane_relative(-1)
-                    elif event.key == pygame.K_RIGHT and hasattr(active_game, "shift_lane_relative"):
-                        active_game.shift_lane_relative(1)
-                    elif event.key in (pygame.K_UP, pygame.K_w) and hasattr(active_game, "advance_manually"):
-                        active_game.advance_manually()
-                    else:
-                        pump_events.append(event)
-                else:
-                    pump_events.append(event)
-
-        pump.pump(pump_events)
-
-        # Vision Pipeline Processing
-        in_overlay_screen = show_camera_setup or show_shop or show_workshop or show_tutorial
-        cam_frame = None if in_overlay_screen and not show_tutorial else camera_supervisor.get_frame()
-        cam_preview_surf = None
-        locked_pose = None
-
-        if cam_frame is not None and cam_frame.image is not None:
+        # Camera & Vision Pipeline
+        cam_frame = camera_supervisor.get_frame()
+        if cam_frame is None or cam_frame.image is None:
+            locked_pose = None
+            pose_result = None
+            preview_surf = None
+        elif cam_frame.timestamp != last_frame_ts:
+            last_frame_ts = cam_frame.timestamp
             pose_result = pose_tracker.process_frame(cam_frame.image, cam_frame.timestamp)
             candidates = [pose_result] if pose_result.has_person else []
             locked_pose = player_lock.update(candidates, zone_calibrator, dt)
 
-            if locked_pose is not None and locked_pose.has_person:
-                # Active in games, academy, or external web games!
+            # F2 allows seated desk testing without standing floor zone
+            if desk_test_mode and locked_pose is None and pose_result.has_person:
+                locked_pose = pose_result
+
+            if locked_pose and locked_pose.has_person:
                 action_detector.process_pose(locked_pose, cam_frame.timestamp)
-                is_jumping_flag = getattr(active_game, "is_jumping", False)
-                zone_calibrator.evaluate_player_zone(locked_pose, is_jumping=is_jumping_flag)
-
-                if active_game == freeze_game and not (in_overlay_screen or external_game_active):
-                    l_hip = locked_pose.landmarks.get("left_hip")
-                    r_hip = locked_pose.landmarks.get("right_hip")
-                    if l_hip and r_hip:
-                        freeze_game.evaluate_body_pose((l_hip.x + r_hip.x)/2.0, (l_hip.y + r_hip.y)/2.0, dt)
-
-                elif active_game == spooky_game and not (in_overlay_screen or external_game_active):
-                    foot_pos = zone_calibrator.get_foot_position(locked_pose)
-                    if foot_pos:
-                        spooky_game.evaluate_player_movement(foot_pos[0], foot_pos[1], dt)
-
-                sh = screen.get_height()
-                box_x, box_y = 30, sh - 180
-                latest_skeleton_pts = [
-                    (box_x + int(lm.x * 200), box_y + int(lm.y * 150))
-                    for lm in locked_pose.raw_landmarks
-                    if lm.visibility > 0.5
-                ]
-            else:
-                latest_skeleton_pts = []
 
             try:
-                small_bgr = cv2.resize(cam_frame.image, (200, 150))
+                small_bgr = cv2.resize(cam_frame.image, (240, 180))
                 small_rgb = cv2.cvtColor(small_bgr, cv2.COLOR_BGR2RGB)
-                cam_preview_surf = pygame.image.frombuffer(small_rgb.tobytes(), (200, 150), "RGB")
+                preview_surf = pygame.image.frombuffer(small_rgb.tobytes(), (240, 180), "RGB")
             except Exception:
-                cam_preview_surf = None
+                pass
 
         bus.drain()
 
-        display.check_display_connection()
-        display.check_fps(clock.get_fps())
+        # Rendering
+        if active_view == "HUB":
+            screen.fill((14, 18, 30))
+            font_title = pygame.font.Font(None, 46)
+            font_btn = pygame.font.Font(None, 32)
+            font_desc = pygame.font.Font(None, 22)
 
-        if active_game.engine.state == GameState.PLAYING and not (in_overlay_screen or external_game_active):
-            active_game.update(dt)
+            title = font_title.render("UNIVERSAL MOTION GAME CONTROLLER", True, (0, 255, 200))
+            screen.blit(title, (sw // 2 - title.get_width() // 2, 35))
 
-        # Render Active Game World
-        active_game.draw(screen)
+            sub = font_desc.render("Play web & PC games with body gestures! Select an arcade game or Background Mode:", True, (190, 205, 225))
+            screen.blit(sub, (sw // 2 - sub.get_width() // 2, 85))
 
-        # Draw Corner Camera Preview when in game or external game
-        if cam_preview_surf is not None and not in_overlay_screen:
-            sh = screen.get_height()
-            box_x, box_y = 30, sh - 180
-            screen.blit(cam_preview_surf, (box_x, box_y))
-            pygame.draw.rect(screen, (52, 152, 219), (box_x, box_y, 200, 150), 2)
+            start_y = 125
+            for i, (label, key) in enumerate(portal_buttons):
+                is_sel = (i == hub_selected_idx)
+                box_rect = (sw // 2 - 340, start_y + i * 54, 680, 46)
+                box_col = (241, 196, 15) if is_sel else (45, 55, 75)
+                pygame.draw.rect(screen, (22, 28, 44), box_rect, border_radius=6)
+                pygame.draw.rect(screen, box_col, box_rect, 2 if is_sel else 1, border_radius=6)
 
-            for pt in latest_skeleton_pts:
-                pygame.draw.circle(screen, (46, 204, 113), pt, 3)
+                btn_col = (255, 255, 255) if is_sel else (180, 195, 215)
+                btn_surf = font_btn.render(label, True, btn_col)
+                screen.blit(btn_surf, (box_rect[0] + 25, box_rect[1] + 10))
 
-            badge_font = pygame.font.Font(None, 24)
-            action_text = f"ACTION: {action_detector.debug_last_action}"
-            rise_text = f"Rise: {action_detector.debug_vertical_rise:+.2f}"
-            src_text = f"[{camera_supervisor.active_source.value.upper()}]"
-            badge_color = (46, 204, 113) if action_detector.is_airborne else ((241, 196, 15) if action_detector.is_ducking else (200, 220, 240))
+            bridge_state = "LIVE" if motion_bridge.enabled else "OFF"
+            stat_surf = font_desc.render(
+                f"CAMERA: [{camera_supervisor.active_source.value.upper()}]  |  "
+                f"ACTION: [{action_detector.debug_last_action}]  |  "
+                f"CONTROLLER: [{bridge_state}]  |  [F2] Desk Test: {'ON' if desk_test_mode else 'OFF'}",
+                True, (46, 204, 113)
+            )
+            screen.blit(stat_surf, (sw // 2 - stat_surf.get_width() // 2, sh - 45))
 
-            badge_surf = badge_font.render(f"{src_text} {action_text} | {rise_text}", True, badge_color)
-            screen.blit(badge_surf, (box_x, box_y - 25))
-
-        # External Game Active Status Banner on TV
-        if external_game_active:
-            ext_surf = pygame.Surface((screen.get_width(), 100), pygame.SRCALPHA)
-            ext_surf.fill((10, 15, 25, 225))
-            screen.blit(ext_surf, (0, 0))
-            font_ext = pygame.font.Font(None, 38)
-            g_title = motion_bridge.active_external_portal.replace("_", " ").upper()
-            b_text = font_ext.render(f"ACTIVE: {g_title} (BODY MOTION CONTROLLER LIVE!)  |  [Esc] Return to Menu", True, (0, 255, 200))
-            screen.blit(b_text, (screen.get_width() // 2 - b_text.get_width() // 2, 35))
-
-        # Overlays
-        if show_camera_setup:
-            configurator.draw(screen)
-
-        elif show_tutorial:
+        elif active_view == "ACADEMY":
             academy.draw(screen, last_action=action_detector.debug_last_action, pose=locked_pose)
 
-        elif show_shop:
-            sw, sh = screen.get_width(), screen.get_height()
-            overlay = pygame.Surface((sw, sh), pygame.SRCALPHA)
-            overlay.fill((12, 16, 26, 245))
-            screen.blit(overlay, (0, 0))
+        elif active_view == "MINI_DOCK":
+            screen.fill((10, 14, 22))
+            font_dock = pygame.font.Font(None, 28)
+            font_small = pygame.font.Font(None, 20)
 
-            font_title = pygame.font.Font(None, 54)
-            font_item = pygame.font.Font(None, 36)
-            font_desc = pygame.font.Font(None, 24)
+            if preview_surf:
+                screen.blit(preview_surf, (sw // 2 - 120, sh // 2 - 120))
+                pygame.draw.rect(screen, (52, 152, 219), (sw // 2 - 120, sh // 2 - 120, 240, 180), 2)
 
-            title = font_title.render("🛒 VIRTUAL COIN SHOP", True, (241, 196, 15))
-            screen.blit(title, (sw // 2 - title.get_width() // 2, 40))
+            act_surf = font_dock.render(f"DETECTED ACTION: {action_detector.debug_last_action}", True, (46, 204, 113))
+            screen.blit(act_surf, (sw // 2 - act_surf.get_width() // 2, sh // 2 + 80))
 
-            p_coins = profile_mgr.active_profile.coins if profile_mgr.active_profile else 0
-            coin_wallet_surf = font_item.render(f"YOUR BALANCE: {p_coins} COINS 🟡", True, (255, 255, 255))
-            screen.blit(coin_wallet_surf, (sw // 2 - coin_wallet_surf.get_width() // 2, 95))
-
-            items = shop_mgr.list_items()
-            start_y = 160
-            for i, it in enumerate(items):
-                is_sel = (i == shop_selected_idx)
-                owned_count = profile_mgr.active_profile.inventory.get(it.item_id, 0) if profile_mgr.active_profile else 0
-                box_color = (241, 196, 15) if is_sel else (50, 60, 80)
-
-                box_rect = (sw // 2 - 380, start_y + i * 65, 760, 56)
-                pygame.draw.rect(screen, (22, 28, 42), box_rect, border_radius=8)
-                pygame.draw.rect(screen, box_color, box_rect, 3 if is_sel else 1, border_radius=8)
-
-                name_color = (255, 255, 255) if is_sel else (200, 210, 220)
-                name_surf = font_item.render(it.name, True, name_color)
-                price_surf = font_item.render(f"{it.price} 🟡", True, (241, 196, 15))
-                screen.blit(name_surf, (box_rect[0] + 20, box_rect[1] + 10))
-                screen.blit(price_surf, (box_rect[0] + 450, box_rect[1] + 10))
-
-                owned_txt = f"OWNED: {owned_count}" if it.category == "powerup" else ("EQUIPPED" if it.item_id in profile_mgr.active_profile.avatar else "UNLOCKED")
-                owned_surf = font_desc.render(owned_txt, True, (46, 204, 113) if owned_count > 0 else (120, 130, 140))
-                screen.blit(owned_surf, (box_rect[0] + 620, box_rect[1] + 18))
-
-            if shop_feedback_msg:
-                msg_surf = font_item.render(shop_feedback_msg, True, (46, 204, 113) if "Bought" in shop_feedback_msg else (231, 76, 60))
-                screen.blit(msg_surf, (sw // 2 - msg_surf.get_width() // 2, sh - 100))
-
-            foot_surf = font_desc.render("[Up/Down] Select  |  [Enter] Buy  |  [Esc] Return to Menu", True, (160, 170, 190))
-            screen.blit(foot_surf, (sw // 2 - foot_surf.get_width() // 2, sh - 50))
-
-        elif show_workshop:
-            sw, sh = screen.get_width(), screen.get_height()
-            overlay = pygame.Surface((sw, sh), pygame.SRCALPHA)
-            overlay.fill((16, 18, 28, 245))
-            screen.blit(overlay, (0, 0))
-
-            font_title = pygame.font.Font(None, 54)
-            font_opt = pygame.font.Font(None, 40)
-            font_sub = pygame.font.Font(None, 26)
-
-            title = font_title.render("🛠️ PARENT WORKSHOP STUDIO", True, (52, 152, 219))
-            screen.blit(title, (sw // 2 - title.get_width() // 2, 50))
-
-            sub = font_sub.render("Reward good behavior with coins or add your child's drawings & voice recordings!", True, (200, 210, 220))
-            screen.blit(sub, (sw // 2 - sub.get_width() // 2, 110))
-
-            opts = [
-                "Reward +100 Coins (Good Chores / Reading)",
-                "Reward +500 Coins (Big Achievement)",
-                "Open Custom Assets Folder (Drop Child Art & Audio)",
-                "Return to Main Menu"
-            ]
-
-            start_y = 200
-            for i, op_text in enumerate(opts):
-                is_sel = (i == workshop_selected_idx)
-                color = (241, 196, 15) if is_sel else (180, 190, 205)
-                box_color = (241, 196, 15) if is_sel else (50, 60, 80)
-                box_rect = (sw // 2 - 420, start_y + i * 85, 840, 65)
-
-                pygame.draw.rect(screen, (24, 30, 45), box_rect, border_radius=8)
-                pygame.draw.rect(screen, box_color, box_rect, 3 if is_sel else 1, border_radius=8)
-
-                opt_surf = font_opt.render(op_text, True, color)
-                screen.blit(opt_surf, (box_rect[0] + 30, box_rect[1] + 15))
-
-            foot = font_sub.render("[Up/Down] Select Option  |  [Enter] Confirm  |  [Esc] Return to Menu", True, (160, 170, 190))
-            screen.blit(foot, (sw // 2 - foot.get_width() // 2, sh - 60))
-
-        # Draw Menu Overlay
-        if display.menu_title and active_game.engine.state in (GameState.MENU, GameState.PAUSED) and not in_overlay_screen:
-            display.draw_menu(screen)
+            tip_text = "Controller Active! Click the game window to focus it. [Esc] Return to Hub"
+            tip_surf = font_small.render(tip_text, True, (170, 185, 205))
+            screen.blit(tip_surf, (sw // 2 - tip_surf.get_width() // 2, sh // 2 + 120))
 
         pygame.display.flip()
 
-    log.info("Shutting down cleanly...")
     motion_bridge.stop_bridge()
-    configurator.release_caps()
     camera_supervisor.close()
     pose_tracker.close()
-    display.close()
-    audio.close()
+    pygame.quit()
 
 
 if __name__ == "__main__":

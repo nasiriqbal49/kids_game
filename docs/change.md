@@ -7,6 +7,29 @@
 
 ---
 
+## [2026-11-05 16:45] Session: `gemini-nasir-2026-11-05-controller-pivot`
+- **Author:** Gemini-Nasir
+- **Milestone Achieved:** **ARCHITECTURAL PIVOT: STANDALONE UNIVERSAL MOTION CONTROLLER**
+- **Verified Unit Tests:** 112 passing tests in 9.8s (`python -m unittest discover -s tests -t . -v`).
+- **What Changed:**
+  - **Strategic Scope Realignment:**
+    - Shifted focus from building custom pygame games (runner, slalom, freeze dance, floor projection) to a dedicated, high-performance Universal Motion Controller for web games (Poki, CrazyGames) and PC games.
+  - **Deep Codebase Purge (85% Token Reduction):**
+    - Removed obsolete custom game packages: `engine/games/`, `engine/mechanics/`, `projection/`, `identity/`, `user_data/`.
+    - Removed obsolete audio synthesizer (`engine/audio.py`), custom TV display renderer (`engine/display.py`), and obstacle engine (`engine/game_engine.py`).
+    - Purged 14 legacy test files and over 1,500 lines of obsolete documentation.
+    - Verified all 112 core controller unit tests passing cleanly in under 10 seconds.
+  - **Unified Motion Controller Hub (`main.py`):**
+    - Promoted `motion_controller_app.py` directly to `main.py` with multi-view support: Main Hub, Interactive Motion Academy (`tutorial_ui.py`), Floating Mini-Dock, and Background injection mode.
+    - Added `[F2]` Desk Test mode for seated webcam testing.
+  - **Documentation Restructure:**
+    - Created clean, token-efficient `docs/developer_guide.md` and `docs/motion_controller_specs.md`.
+    - Updated `docs/project_graph.md` via `tools/generate_graph.py`.
+- **Next Immediate Step:**
+  - Implement Sandboxed Browser Kiosk mode (borderless child-safe window) and Air Mouse (touchless cursor navigation & replay clicks).
+
+---
+
 
 ## [2026-11-02 18:45] Session: `gemini-nasir-2026-11-02-session-calibration`
 - **Author:** Gemini-Nasir

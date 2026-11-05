@@ -178,11 +178,43 @@ class MotionControllerBridge:
         return False
 
     def launch_portal_or_game(self, portal_key: str) -> bool:
+        """
+        Launches external web game portal. If Chrome or Edge is installed,
+        opens in Sandboxed App Mode (--app=URL) without address bars or tabs,
+        preventing children from accidentally navigating to personal files.
+        """
         url = ARCADE_PORTALS.get(portal_key, portal_key)
         self.enabled = True
         self._last_sent.clear()
         self.active_external_portal = portal_key
         log.info("Motion Bridge activated! Launching %s (%s)...", portal_key, url)
+
+        # Look for Chrome or Edge for kiosk/app sandboxing
+        chrome_paths = [
+            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+            os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe")
+        ]
+        edge_paths = [
+            r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+            r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"
+        ]
+
+        browser_exe = None
+        for p in chrome_paths + edge_paths:
+            if os.path.exists(p):
+                browser_exe = p
+                break
+
+        if browser_exe:
+            try:
+                # --app creates a borderless window locking kids directly into the game
+                subprocess.Popen([browser_exe, f"--app={url}", "--start-maximized"])
+                log.info("Launched sandboxed Kiosk window via %s", browser_exe)
+                return True
+            except Exception as err:
+                log.warning("Kiosk launch failed: %s. Falling back to default browser.", err)
+
         try:
             webbrowser.open(url)
             return True

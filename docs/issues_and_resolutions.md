@@ -240,3 +240,30 @@ This document tracks every error, edge-case hurdle, or design correction encount
 - **Root Cause:** `"body_height_norm"` was only inserted into metadata during active detection rather than initialized with a safe default.
 - **Resolution:** Initialized `"body_height_norm": 0.55` in metadata dictionary and used `.get("body_height_norm", 0.55)` defensively. Added automated unique-name archival into a dedicated `reports/` directory.
 - **Status:** **Resolved & Verified**
+
+---
+
+### Issue #029: Camera supervisor picked Iriun virtual camera (black frames) over laptop webcam
+- **Module:** 17 (Camera Supervisor)
+- **Symptom:** No webcam light, no pose, "phone" camera active with no phone connected.
+- **Root Cause:** Iriun driver exposes virtual cameras that return black frames; any frame was accepted as a phone.
+- **Resolution:** `min_brightness` check; no re-probing of a healthy camera; discovery moved to a background thread.
+- **Status:** **Resolved & Verified**
+
+### Issue #030: Silent app crash on camera release
+- **Module:** 9 (Camera Manager)
+- **Symptom:** App closed without traceback; camera later reported -1x-1 @ -1 FPS.
+- **Root Cause:** `cap.release()` called while the capture thread was inside `read()`; health check also too strict (1 s) during MediaPipe load.
+- **Resolution:** Release done by the capture thread after its loop; stop() joins 3 s; supervisor stale limit 6 s.
+- **Status:** **Resolved & Verified**
+
+### Issue #031: Seated player never locked; zone said OUTSIDE
+- **Module:** 12/13/14
+- **Symptom:** Gestures did nothing unless desk test (F2) was on.
+- **Root Cause:** MediaPipe guesses unseen hips/ankles; code trusted them (foot y=1.55).
+- **Resolution:** Visibility checks in zone foot position, lock proportions and action detector (lower-body gestures off when hips unseen); lean thresholds scaled by shoulder width; recoil velocity threshold raised.
+- **Status:** **Resolved (seated lean verified; standing pose pending calibration report)**
+
+### Issue #032: calibrate_session.py compares action names with test IDs
+- **Symptom:** NERF_GUN, STEERING, PUNCH always report MISSED.
+- **Status:** **Open**
