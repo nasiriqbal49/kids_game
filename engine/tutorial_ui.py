@@ -61,6 +61,26 @@ TUTORIAL_LESSONS = [
         "keys": "Down Arrow",
         "games": "Subway Surfers, Temple Run 2"
     },
+        {
+        "id": "LEAN_LEFT",
+        "title": "LEAN LEFT",
+        "toy": "Your Body",
+        "mode": "SEATED or STANDING",
+        "how": "Tilt your upper body to the left, then return to center.",
+        "action": "LEAN_LEFT",
+        "keys": "Left Arrow",
+        "games": "Subway Surfers, Slope 3D"
+    },
+    {
+        "id": "LEAN_RIGHT",
+        "title": "LEAN RIGHT",
+        "toy": "Your Body",
+        "mode": "SEATED or STANDING",
+        "how": "Tilt your upper body to the right, then return to center.",
+        "action": "LEAN_RIGHT",
+        "keys": "Right Arrow",
+        "games": "Subway Surfers, Slope 3D"
+    },
     {
         "id": "PUNCH",
         "title": "BOXING PUNCH",
@@ -442,6 +462,17 @@ class TutorialAcademy:
             pygame.draw.line(surface, col_body, (cx, cy), (cx - 10, cy + 60), 5)
             pygame.draw.line(surface, (255, 100, 150), (cx, cy), (cx + 30, cy + 25), 5)
             pygame.draw.line(surface, (255, 100, 150), (cx + 30, cy + 25), (cx + 10, cy + 25), 5)
+
+        elif lesson_id in ("LEAN_LEFT", "LEAN_RIGHT"):
+            direction = -1 if lesson_id == "LEAN_LEFT" else 1
+            lean = int(max(0.0, math.sin(t * 2.5)) * 45) * direction
+            head_x = cx + lean
+            head_y = cy - torso_len - 20
+            pygame.draw.circle(surface, col_body, (head_x, head_y), head_radius)
+            pygame.draw.line(surface, col_body, (head_x, head_y + head_radius), (cx, cy), 5)
+            pygame.draw.line(surface, col_body, (cx, cy), (cx - 20, cy + 55), 5)
+            pygame.draw.line(surface, col_body, (cx, cy), (cx + 20, cy + 55), 5)
+
 
         else:
             head_y = cy - torso_len - 20

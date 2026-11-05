@@ -1,7 +1,7 @@
 import ast
 import os
 from pathlib import Path
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Tuple
 
 REPO_DIR = Path(__file__).resolve().parent.parent
 OUTPUT_GRAPH_FILE = REPO_DIR / "docs" / "project_graph.md"
@@ -10,14 +10,19 @@ TARGET_FOLDERS = ["core", "engine", "vision", "identity", "tools", "projection"]
 IGNORE_DIRS = {".venv", "__pycache__", "dist", "build", ".git"}
 
 
+def sanitize_id(name: str) -> str:
+    """Converts file paths into clean, safe Mermaid IDs without markdown formatting conflicts."""
+    return name.replace("/", "_").replace(".", "_").replace("-", "_").replace("__", "")
+
+
 class CodeGraphScanner:
     """
-    Parses Python Abstract Syntax Trees (AST) to generate an interactive
-    Mermaid.js node graph of all connected modules, classes, and imports.
+    Parses Python AST into clean Mermaid flowchart nodes.
+    Excludes __init__ to prevent markdown bold-tag collisions.
     """
 
     def __init__(self):
-        self.nodes: Set[str] = set()
+        self.nodes: Set[Tuple[str, str]] = set()
         self.edges: List[str] = []
 
     def scan_directory(self) -> None:
@@ -30,7 +35,7 @@ class CodeGraphScanner:
                 dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
 
                 for file in files:
-                    if file.endswith(".py"):
+                    if file.endswith(".py") and not file.startswith("__"):
                         full_path = Path(root) / file
                         rel_path = full_path.relative_to(REPO_DIR)
                         self._parse_file(full_path, str(rel_path).replace("\\", "/"))
@@ -43,54 +48,64 @@ class CodeGraphScanner:
             return
 
         clean_mod = mod_name.replace(".py", "")
-        self.nodes.add(clean_mod)
+        source_id = sanitize_id(clean_mod)
+        self.nodes.add((source_id, clean_mod))
 
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom):
                 if node.module:
-                    imported_pkg = node.module.split(".")[0]
-                    if imported_pkg in TARGET_FOLDERS:
-                        target = node.module.replace(".", "/")
-                        self.edges.append(f"    {clean_mod} -->|imports| {target}")
+                    pkg = node.module.split(".")[0]
+                    if pkg in TARGET_FOLDERS:
+                        target_mod = node.module.replace(".", "/")
+                        if not target_mod.endswith("__init__"):
+                            target_id = sanitize_id(target_mod)
+                            self.edges.append(f"    {source_id} --> {target_id}")
             elif isinstance(node, ast.Import):
                 for alias in node.names:
                     pkg = alias.name.split(".")[0]
                     if pkg in TARGET_FOLDERS:
-                        target = alias.name.replace(".", "/")
-                        self.edges.append(f"    {clean_mod} -->|imports| {target}")
+                        target_mod = alias.name.replace(".", "/")
+                        if not target_mod.endswith("__init__"):
+                            target_id = sanitize_id(target_mod)
+                            self.edges.append(f"    {source_id} --> {target_id}")
 
     def generate_markdown(self) -> str:
         lines = [
             "# Project Architecture & Dependency Knowledge Graph",
             "",
-            "> **Generated automatically for Google Gemini Code Assist and Graphify.**",
-            "> This graph maps every connected module node, reducing token usage by 95%.",
+            "> **Generated automatically for Google Gemini and Graphify.**",
+            "> Maps every connected module node with zero token waste.",
             "",
             "```mermaid",
-            "graph TD",
-            "    %% Architectural Subgraphs"
+            "flowchart LR"
         ]
 
         layers = {
-            "Core Layer": "core/",
-            "Vision & Camera Pipeline": "vision/",
-            "Engine & Controller Bridge": "engine/",
-            "Identity & Economy": "identity/",
-            "Projection Output": "projection/",
-            "Tools & Launchers": "tools/"
+            "Core_Layer": ("Core Architecture", "core/"),
+            "Vision_Pipeline": ("Vision Pipeline", "vision/"),
+            "Engine_Layer": ("Engine & Controller", "engine/"),
+            "Identity_Layer": ("Identity & Economy", "identity/"),
+            "Projection_Layer": ("Projection Output", "projection/"),
+            "Tools_Layer": ("Tools & Launchers", "tools/")
         }
 
-        for layer_name, prefix in layers.items():
-            lines.append(f"    subgraph {layer_name}")
-            for node in sorted(self.nodes):
-                if node.startswith(prefix.replace("/", "")):
-                    lines.append(f"        {node}")
+        # Filter valid node IDs
+        known_ids = {n[0] for n in self.nodes}
+
+        for sub_id, (sub_title, prefix) in layers.items():
+            lines.append(f'    subgraph {sub_id} ["{sub_title}"]')
+            for node_id, display_label in sorted(self.nodes):
+                if display_label.startswith(prefix):
+                    lines.append(f'        {node_id}["{display_label}"]')
             lines.append("    end")
 
         lines.append("")
-        lines.append("    %% Connected Edges & Data Flow")
+        lines.append("    %% Data Flow Connections")
+        # Only include edges where both nodes exist
         for edge in sorted(set(self.edges)):
-            lines.append(edge)
+            parts = edge.strip().split(" --> ")
+            if len(parts) == 2 and parts[0] in known_ids and parts[1] in known_ids:
+                lines.append(f"    {parts[0]} --> {parts[1]}")
 
         lines.extend([
             "```",
@@ -113,7 +128,7 @@ def main():
 
     print("==================================================")
     print(" GRAPHIFY SCAN COMPLETE!")
-    print(f" Generated visual node map: {OUTPUT_GRAPH_FILE}")
+    print(f" Generated valid visual node map: {OUTPUT_GRAPH_FILE}")
     print("==================================================")
 
 

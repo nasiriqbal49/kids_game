@@ -32,6 +32,7 @@ class ActionDetector:
         self.velocity_history = deque(maxlen=3)
 
         self.is_airborne: bool = False
+        self._lower_visible_prev: bool = True
         self.is_ducking: bool = False
         self.current_lean: str = EventType.LEAN_CENTER
 
@@ -52,6 +53,12 @@ class ActionDetector:
 
         self.lean_enter_threshold: float = 0.025
         self.lean_exit_threshold: float = 0.012
+        
+        # Lean thresholds scale with shoulder width (works seated and standing)
+        self.lean_enter_ratio: float = 0.15
+        self.lean_exit_ratio: float = 0.07
+        # Nerf recoil: minimum upward wrist speed (normalized units/sec)
+        self.recoil_min_velocity: float = 0.60
 
         # Comedic state
         self.last_elbow_y: Optional[float] = None
@@ -111,9 +118,17 @@ class ActionDetector:
         l_sh = lms.get("left_shoulder")
         r_sh = lms.get("right_shoulder")
         nose = lms.get("nose")
+        
         l_ankle = lms.get("left_ankle")
         r_ankle = lms.get("right_ankle")
+        # Seated or cropped legs: MediaPipe guesses ankles off-screen. Ignore unseen ankles.
+        if l_ankle and l_ankle.visibility < 0.5:
+            l_ankle = None
+        if r_ankle and r_ankle.visibility < 0.5:
+            r_ankle = None
+        
         l_elbow = lms.get("left_elbow")
+
         r_elbow = lms.get("right_elbow")
         l_wrist = lms.get("left_wrist")
         r_wrist = lms.get("right_wrist")
@@ -145,6 +160,17 @@ class ActionDetector:
             if l_wrist and r_wrist:
                 self.last_wrist_x = (l_wrist.x + r_wrist.x) / 2.0
             return
+        
+        # Seated / legs cropped: hip positions are guesses, so lower-body gestures are disabled
+        lower_body_visible = (l_hip.visibility >= 0.5 and r_hip.visibility >= 0.5)
+        if (not lower_body_visible) or (not self._lower_visible_prev):
+            if self.is_airborne or self.is_ducking:
+                self.reset_neutral_posture()
+            self.baseline_hip_y = hip_y
+            self.last_hip_y = hip_y
+            self.baseline_ankle_y = None
+            self.velocity_history.clear()
+        self._lower_visible_prev = lower_body_visible        
 
         if self.baseline_ankle_y is None and current_ankle_y is not None:
             self.baseline_ankle_y = current_ankle_y
@@ -252,7 +278,7 @@ class ActionDetector:
             if is_aiming_posture:
                 if self.last_recoil_y is not None:
                     recoil_velocity = (self.last_recoil_y - avg_wrist_y) / dt
-                    if recoil_velocity > 0.20 and (now - self.last_recoil_time) > 0.25:
+                    if recoil_velocity > self.recoil_min_velocity and (now - self.last_recoil_time) > 0.25:
                         self.last_recoil_time = now
                         self.debug_last_action = "SHOOT"
                         log.info("Action: NERF RECOIL SHOT fired!")
@@ -352,18 +378,21 @@ class ActionDetector:
         # 10. LEAN LEFT / RIGHT / CENTER
         # -------------------------------------------------------------
         torso_tilt = sh_x - hip_x
+        shoulder_width = max(0.05, abs(l_sh.x - r_sh.x))
+        lean_enter = self.lean_enter_ratio * shoulder_width
+        lean_exit = self.lean_exit_ratio * shoulder_width
         new_lean = self.current_lean
 
         if self.current_lean == EventType.LEAN_CENTER:
-            if torso_tilt < -self.lean_enter_threshold:
+            if torso_tilt < -lean_enter:
                 new_lean = EventType.LEAN_LEFT
-            elif torso_tilt > self.lean_enter_threshold:
+            elif torso_tilt > lean_enter:
                 new_lean = EventType.LEAN_RIGHT
         elif self.current_lean == EventType.LEAN_LEFT:
-            if torso_tilt > -self.lean_exit_threshold:
+            if torso_tilt > -lean_exit:
                 new_lean = EventType.LEAN_CENTER
         elif self.current_lean == EventType.LEAN_RIGHT:
-            if torso_tilt < self.lean_exit_threshold:
+            if torso_tilt < lean_exit:
                 new_lean = EventType.LEAN_CENTER
 
         if new_lean != self.current_lean:

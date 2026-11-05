@@ -106,6 +106,10 @@ class ZoneCalibrator:
 
         left_ankle = pose.landmarks.get("left_ankle")
         right_ankle = pose.landmarks.get("right_ankle")
+        if left_ankle and left_ankle.visibility < 0.5:
+            left_ankle = None
+        if right_ankle and right_ankle.visibility < 0.5:
+            right_ankle = None
 
         if left_ankle and right_ankle:
             foot_x = (left_ankle.x + right_ankle.x) / 2.0
@@ -116,11 +120,19 @@ class ZoneCalibrator:
         elif right_ankle:
             return right_ankle.x, right_ankle.y
 
-        # Fallback to hips if ankles not visible
+        # Fallback to hips only if MediaPipe can actually see them
         left_hip = pose.landmarks.get("left_hip")
         right_hip = pose.landmarks.get("right_hip")
-        if left_hip and right_hip:
+        if (left_hip and right_hip and
+                left_hip.visibility >= 0.5 and right_hip.visibility >= 0.5):
             return (left_hip.x + right_hip.x) / 2.0, max(left_hip.y, right_hip.y)
+
+        # Seated / upper body only: use shoulders for left-right, mid-zone for depth
+        l_sh = pose.landmarks.get("left_shoulder")
+        r_sh = pose.landmarks.get("right_shoulder")
+        if (l_sh and r_sh and l_sh.visibility >= 0.5 and r_sh.visibility >= 0.5):
+            mid_y = (self.zone.min_y + self.zone.max_y) / 2.0
+            return (l_sh.x + r_sh.x) / 2.0, mid_y
 
         return None
 

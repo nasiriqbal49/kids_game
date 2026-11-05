@@ -13,7 +13,6 @@ from core.event_bus import get_event_bus
 from engine.motion_bridge import MotionControllerBridge, ARCADE_PORTALS
 from engine.tutorial_ui import TutorialAcademy
 from vision.camera_supervisor import CameraSupervisor
-from vision.camera_configurator import CameraConfigurator, CameraRole
 from vision.pose_tracker import PoseTracker
 from vision.player_lock import PlayerLock
 from vision.zone_calibration import ZoneCalibrator
@@ -35,27 +34,18 @@ def run_controller():
 
     bus = get_event_bus()
     motion_bridge = MotionControllerBridge(bus=bus, cfg=cfg)
-    configurator = CameraConfigurator(bus=bus, cfg=cfg)
-    configurator.scan_devices(max_to_test=8)
-
-    def build_supervisor() -> CameraSupervisor:
-        """Creates a fresh camera supervisor from the currently assigned FRONT camera."""
-        front_idx = configurator.get_assigned_device(CameraRole.FRONT)
-        if front_idx is None:
-            front_idx = 0
-        return CameraSupervisor(bus=bus, cfg=cfg, phone_index=front_idx, laptop_index=0)
-
-    # The setup scan above opened preview captures; free them so the supervisor can open the camera.
-    configurator.release_caps()
-    camera_supervisor = build_supervisor()
 
     pose_tracker = PoseTracker(bus=bus, cfg=cfg)
+
+    # Single camera: the supervisor prefers Iriun, else the laptop webcam.
+    camera_supervisor = CameraSupervisor(bus=bus, cfg=cfg, laptop_index=0, min_brightness=6.0)
+
     zone_calibrator = ZoneCalibrator(bus=bus, cfg=cfg)
     player_lock = PlayerLock(bus=bus, cfg=cfg)
     action_detector = ActionDetector(bus=bus, cfg=cfg)
     academy = TutorialAcademy()
 
-    active_view = "HUB"  # "HUB", "ACADEMY", "CAMERA_SETUP", "MINI_DOCK"
+    active_view = "HUB"  # "HUB", "ACADEMY", "MINI_DOCK"
     hub_selected_idx = 0
 
     portal_buttons = [
@@ -67,12 +57,17 @@ def run_controller():
         ("Iron Snout Fighting (Punch & Kick)", "iron_snout"),
         ("Zombie Derby (Steer & Shoot)", "zombie_derby"),
         ("Motion Academy & Gesture Guide", "academy"),
-        ("Camera Setup Wizard", "camera_setup"),
     ]
 
     desk_test_mode = False  # F2: bypass zone/lock so a seated webcam test works
 
     running = True
+
+    last_frame_ts = -1.0
+    locked_pose = None
+    pose_result = None
+    preview_surf = None
+
 
     while running:
         dt = clock.tick(30) / 1000.0  # Runs at lightweight 30 FPS (< 2% CPU)
@@ -84,12 +79,6 @@ def run_controller():
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     if active_view != "HUB":
-                        if active_view == "CAMERA_SETUP":
-                            # Leaving setup without saving: release previews and restart the
-                            # camera supervisor (it was closed when the wizard opened).
-                            configurator.release_caps()
-                            camera_supervisor.close()
-                            camera_supervisor = build_supervisor()
                         active_view = "HUB"
                         motion_bridge.stop_bridge()
                     else:
@@ -109,10 +98,6 @@ def run_controller():
                         label, key = portal_buttons[hub_selected_idx]
                         if key == "academy":
                             active_view = "ACADEMY"
-                        elif key == "camera_setup":
-                            active_view = "CAMERA_SETUP"
-                            camera_supervisor.close()
-                            configurator.scan_devices(max_to_test=8)
                         elif key == "background":
                             active_view = "MINI_DOCK"
                             motion_bridge.start_background_mode()
@@ -129,26 +114,6 @@ def run_controller():
                     elif event.key == pygame.K_TAB:
                         academy.toggle_cheat_sheet()
 
-                # CAMERA SETUP Navigation
-                elif active_view == "CAMERA_SETUP":
-                    if event.key == pygame.K_LEFT:
-                        configurator.selected_device_idx = max(0, configurator.selected_device_idx - 1)
-                    elif event.key == pygame.K_RIGHT:
-                        configurator.selected_device_idx = max(
-                            0, min(len(configurator.detected_devices) - 1, configurator.selected_device_idx + 1))
-                    elif event.key == pygame.K_1:
-                        if configurator.detected_devices:
-                            dev_idx = configurator.detected_devices[configurator.selected_device_idx]["device_index"]
-                            configurator.assign_role(CameraRole.FRONT, dev_idx)
-                    elif event.key == pygame.K_r:
-                        configurator.scan_devices(max_to_test=8)
-                    elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
-                        configurator.save_to_config()
-                        configurator.release_caps()
-                        active_view = "HUB"
-                        camera_supervisor.close()
-                        camera_supervisor = build_supervisor()
-
                 # MINI DOCK Mode
                 elif active_view == "MINI_DOCK":
                     if event.key == pygame.K_F10:
@@ -156,12 +121,13 @@ def run_controller():
                         motion_bridge.stop_bridge()
 
         # Camera & Pose Processing
-        cam_frame = None if active_view == "CAMERA_SETUP" else camera_supervisor.get_frame()
-        locked_pose = None
-        pose_result = None
-        preview_surf = None
-
-        if cam_frame is not None and cam_frame.image is not None:
+        cam_frame = camera_supervisor.get_frame()
+        if cam_frame is None or cam_frame.image is None:
+            locked_pose = None
+            pose_result = None
+            preview_surf = None
+        elif cam_frame.timestamp != last_frame_ts:
+            last_frame_ts = cam_frame.timestamp
             pose_result = pose_tracker.process_frame(cam_frame.image, cam_frame.timestamp)
             candidates = [pose_result] if pose_result.has_person else []
             locked_pose = player_lock.update(candidates, zone_calibrator, dt)
@@ -231,9 +197,21 @@ def run_controller():
                 f"[F2] desk test: {'ON' if desk_test_mode else 'off'}"
             )
             screen.blit(diag_font.render(diag_msg, True, (255, 255, 255)), (20, sh - 28))
+            has_p = pose_result is not None and pose_result.has_person
+            foot = zone_calibrator.get_foot_position(pose_result) if has_p else None
+            lm = pose_result.landmarks if has_p else {}
 
-        elif active_view == "CAMERA_SETUP":
-            configurator.draw(screen)
+            def _vis(name):
+                p = lm.get(name)
+                return f"{p.visibility:.2f}" if p else "-"
+
+            foot_txt = f"foot=({foot[0]:.2f},{foot[1]:.2f})" if foot else "foot=none"
+            vis_txt = (f"vis hip {_vis('left_hip')}/{_vis('right_hip')}  "
+                       f"ankle {_vis('left_ankle')}/{_vis('right_ankle')}  "
+                       f"shoulder {_vis('left_shoulder')}/{_vis('right_shoulder')}")
+            screen.blit(diag_font.render(foot_txt + "   " + vis_txt, True, (255, 255, 0)), (20, sh - 52))
+
+
 
         elif active_view == "MINI_DOCK":
             # Floating Mini-Widget Companion View
@@ -259,7 +237,6 @@ def run_controller():
         pygame.display.flip()
 
     motion_bridge.stop_bridge()
-    configurator.release_caps()
     camera_supervisor.close()
     pose_tracker.close()
     pygame.quit()

@@ -184,6 +184,14 @@ class CameraDevice:
             sleep_time = max(0.001, frame_interval - elapsed_step)
             time.sleep(sleep_time)
 
+        # Loop ended: release the device from this thread, never while read() runs elsewhere
+        if self.cap is not None:
+            try:
+                self.cap.release()
+            except Exception:
+                pass
+            self.cap = None
+
     def check_fps_health(self) -> None:
         """Low FPS degradation and automatic downscaling (UC 09.08)."""
         if self.measured_fps < (self.target_fps * 0.6) and not self.low_fps_warned:
@@ -222,8 +230,9 @@ class CameraDevice:
         """Stops thread and releases hardware (UC 09.14)."""
         self._running = False
         if self._thread and self._thread.is_alive():
-            self._thread.join(timeout=1.0)
-        if self.cap is not None:
+            self._thread.join(timeout=3.0)
+        thread_done = not (self._thread and self._thread.is_alive())
+        if self.cap is not None and thread_done:
             try:
                 self.cap.release()
             except Exception:

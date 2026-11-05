@@ -44,7 +44,7 @@ class PlayerLock:
         l_hip = lms.get("left_hip")
         r_hip = lms.get("right_hip")
 
-        if l_sh and r_sh and l_hip and r_hip:
+        if (l_sh and r_sh and l_hip and r_hip and min(l_sh.visibility, r_sh.visibility, l_hip.visibility, r_hip.visibility) >= 0.5):
             shoulder_w = abs(l_sh.x - r_sh.x)
             torso_h = abs(((l_sh.y + r_sh.y) / 2.0) - ((l_hip.y + r_hip.y) / 2.0))
             return {

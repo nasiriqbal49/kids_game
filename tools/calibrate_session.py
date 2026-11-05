@@ -101,7 +101,7 @@ class TimePromptedCalibrator:
         clock = pygame.time.Clock()
 
         bus = get_event_bus()
-        camera_supervisor = CameraSupervisor(bus=bus, cfg=cfg)
+        camera_supervisor = CameraSupervisor(bus=bus, cfg=cfg, laptop_index=0, min_brightness=6.0)
         pose_tracker = PoseTracker(bus=bus, cfg=cfg)
         action_detector = ActionDetector(bus=bus, cfg=cfg)
 
